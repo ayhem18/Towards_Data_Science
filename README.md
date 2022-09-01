@@ -19,10 +19,10 @@ The repo constitutes of 3 main  folders:
 
 The packages used (and all related information can be found in the requirements.txt). Among the libraries used: 
  * [scikit-learn](https://www.geeksforgeeks.org/how-to-install-scikit-learn-on-linux/)
-    * [numpy](https://www.code-learner.com/how-to-install-numpy-on-macos-linux-and-windows/#:~:text=Open%20a%20terminal%20and%20run%20the%20command%20%24,or%20install%20multiple%20packages%20at%20the%20same%20time.) 
-    * [pandas](https://www.geeksforgeeks.org/how-to-install-python-pandas-on-windows-and-linux/#:~:text=To%20install%20Pandas%20on%20Linux%2C%20just%20type%20the,run%20Pandas%20Environment%20in%20Python%3A%20pip3%20install%20pandas)
-    * [matplotlib](https://www.code-learner.com/how-to-install-numpy-on-macos-linux-and-windows/#:~:text=Open%20a%20terminal%20and%20run%20the%20command%20%24,or%20install%20multiple%20packages%20at%20the%20same%20time.)
-    * [Tensorflow](https://www.geeksforgeeks.org/install-tensorflow-on-linux/)
+* [numpy](https://www.code-learner.com/how-to-install-numpy-on-macos-linux-and-windows/#:~:text=Open%20a%20terminal%20and%20run%20the%20command%20%24,or%20install%20multiple%20packages%20at%20the%20same%20time.) 
+* [pandas](https://www.geeksforgeeks.org/how-to-install-python-pandas-on-windows-and-linux/#:~:text=To%20install%20Pandas%20on%20Linux%2C%20just%20type%20the,run%20Pandas%20Environment%20in%20Python%3A%20pip3%20install%20pandas)
+* [matplotlib](https://www.code-learner.com/how-to-install-numpy-on-macos-linux-and-windows/#:~:text=Open%20a%20terminal%20and%20run%20the%20command%20%24,or%20install%20multiple%20packages%20at%20the%20same%20time.)
+* [Tensorflow](https://www.geeksforgeeks.org/install-tensorflow-on-linux/)
 
 
 
