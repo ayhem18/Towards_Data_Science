@@ -17,7 +17,7 @@ The column 'var7' represents date-time data. My work with this column can be sum
     2. Only the first 7 months were considered
     3. The distributions of months and days per month are quite similar between the positive and negative classes
 
-* As only the year 2019 is present, this part of the dates is dropped. Additionally the time part was dropped as well for 2 reasons. The dataset is not a time-series dataset. the column 'var3' represent areas meaning the issue is related to large georgraphical areas so it safe to assume the measurements vary along more signficant time intervals: days, months.
+* As only the year 2019 is present, this part of the dates is dropped. Additionally the time part was dropped as well for 2 reasons. The dataset is not a time-series dataset. the column 'var3' represent areas meaning the issue is related to large georgraphical areas so it is safe to assume the measurements vary along more signficant time intervals: days, months.
 * The datetime data was reduced later to its monthly counterparts as features showed significant variance with respect to (day + month) combination which was represented by the day_of_year temporary feature.
 * The month value represents a suitable encoding as the data is not cyclic (only 7 months out of 12) and the number of uniques values is small.
 
@@ -64,17 +64,18 @@ KNN was the best classifier as it outperformed the other classfiers through 4 pe
 Even though the relation between the target variable and numerical features are linear to a certain extent (which explains the high performance of Logistic regression), the relation with categorical feature is not as linear. KNN can capture this interaction (and any type of interactions) due to its distance based approach.
 
 ## features
-• What were the most critical features with regards to the classification, and why?
+• What were the most critical features with regards to the classification, and why? 
 • What features might be redundant or are not useful, and why? 
 
 Both these questions can be answered simultaneously. We can divide the 7 features into 3 main categories:
 1. most revelant, (critical): f1, f5
 2. moderately relevant : f2, f3, f4
-3. little to no relevance: f6, f7(month)
+3. little to no relevance: f6, f7(month)  
+   
 This is supported by 3 different arguments:
 1. scatter plots: for numerical continous features, box plots: for categorical ones
 2. correlation matrix: visualized with a heatmap
-3. having the same or better performance for all classifiers across all performances metrics after dropping ['f2', 'f4']
+3. having the same or better performance for all classifiers across all performances metrics after dropping ['f6', 'f7']
 
 ## PCA
 Principle component analysis led to a slight decrease in performance. This can be explained by the small number of initial features. As PCA focuses on building new features (components) that maximize variance, the interactions between the target variable and low-variance features are generally lost. The low variance elements might not be as relevant. However, removing them might lead to a decrease in performance: mainly when the initial performance is higher than $95 \%$ accuracy-wise.
