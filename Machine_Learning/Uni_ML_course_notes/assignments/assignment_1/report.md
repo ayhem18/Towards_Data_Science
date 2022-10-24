@@ -30,7 +30,8 @@ I considered a number of encodings for this column:
 * Ordinal Encoding: a simple encoding that does not increase the size of the data. Yet, it also introduces a main challenge: imposing an order on data with no inherited order. Many countries appear more than once assigned with different classes
 * Target Encoding: generally defined as replacing the categories with a value computed out of the target variable. I grouped the data by area, and calculated the mean of 'f4' for the corresponding group. Areas that do not appear in the non-NaN data are replaced with the median of 'f4' over all values.
 
-I experiemented with these 3 encodings and The predictions were better with ***Target Encoding***. The practical results aligned with the theoretical expectations.
+I experiemented with these 3 encodings. Target Encoding resulted in smaller mean squared errors with most of the models. Thus, ***Target Encoding*** was deemed most suitable for numerically representing the 'var3' column.
+The practical results aligned with the theoretical expectations.
 
 ## Imputing 'var4'
 The models considered for the sub-regression problem are:
@@ -78,15 +79,15 @@ This is supported by 3 different arguments:
 3. having the same or better performance for all classifiers across all performances metrics after dropping ['f6', 'f7']
 
 ## PCA
-Principle component analysis led to a slight decrease in performance. This can be explained by the small number of initial features. As PCA focuses on building new features (components) that maximize variance, the interactions between the target variable and low-variance features are generally lost. The low variance elements might not be as relevant. However, removing them might lead to a decrease in performance: mainly when the initial performance is higher than $95 \%$ accuracy-wise.
+Principle component analysis led to a slight decrease in performance. This can be explained by the small number of initial features. As PCA focuses on building new features (components) that maximize variance, the interactions between the target variable and low-variance features are generally lost. The low variance elements might not be as relevant. However, removing them might lead to a decrease in performance: mainly when the initial performance is higher than 95 \% accuracy-wise.
 
 ## Multi-Label Learning
 1. Multi-label learning problems are problems where each sample  / sample is associated with at least two target variables. In other words, the machine learning algorithm will not predict a single value but multiple ones.
 2. One possible way to transform this problem into a multi-label classification problem is by considering 'var6' as a second target variable. Both features are binary and each combination of is present in the dataset with relatively the same proportion, which makes it an attractive and resonable option.
 3. The current models are not capable of tackling this problem as they are not designed accordingly. My research concerning this issue revealed the following approachs to overcomes the limitations :
     * use more sophisticated models such as Deep Neural Networks, or models provided by the more advanced libraries such as Scikit-Multi-Learn
-    * Assuming a $n$ label classification problem, Use problem transformation techniques:
-        1. binary relevance: Consider each of the different labels as a single label classification problem, and then for the final multi-label classification, we run $n$ (each trained on a the same dataset considering only the $i$-th class) and combine the results: computationally expensive, the correlation between the different labels can be lost.
-        2. Use models' chaining: where the first model is trained on the initial dataset to predict the first class, the models' outputs is passed along with the initial dataset to $2$-nd classifier to predit the second class, the same procedure continues until the last target variable. this method preserves the classes correlation.
+    * Assuming a n label classification problem, Use problem transformation techniques:
+        1. binary relevance: Consider each of the different labels as a single label classification problem, and then for the final multi-label classification, we run n models(each trained on a the same dataset considering only the i-th class) and combine the results: computationally expensive, the correlation between the different labels can be lost.
+        2. Use models' chaining: where the first model is trained on the initial dataset to predict the first label/target, the model's outputs is passed along with the initial dataset to the 2-nd model to predict the second label/target, the same procedure continues until the last target. This method preserves the correlation between targets.
         3. Label Powerset: consider every possible combination of the two(or more) variables and treat each combination as a seperate class in the new problem
 
