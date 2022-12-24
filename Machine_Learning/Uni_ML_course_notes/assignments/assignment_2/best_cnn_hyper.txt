@@ -1,0 +1,11 @@
+num_convs:3
+conv_per_block:3
+n_filter_0:6
+n_filter_1:6
+num_f_c:1
+n_units:7
+dropout:0.12988253066590724
+optimizer:rmsprop
+learning_rate:0.03432440811128526
+momentum:0.992802292881719
+n_filter_2:6
