@@ -1,9 +1,0 @@
-units_0:9
-num_layers:2
-dropout:0.05
-optimizer:rmsprop
-learning_rate:0.015230807098640217
-momentum:0.9000426882070163
-units_1:8
-units_2:8
-units_3:8
