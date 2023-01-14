@@ -22,5 +22,6 @@ SELECT ROUND(SUM(CASE WHEN row_num = CEIL(@num/ 2) OR row_num  = CEIL((@num + 1)
 / (CEIL((@num + 1) / 2) - CEIL(@num/ 2)  + 1), 4) AS median 
 FROM temp_table;
 
+-- solution for the following problem: 
 
 
