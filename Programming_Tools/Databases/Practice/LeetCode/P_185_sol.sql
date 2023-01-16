@@ -38,6 +38,9 @@ FROM employee as e, salary_3
 WHERE d_id  = e.departmentid and (e.salary >= salary_3.salary_3 OR salary_3.salary_3 IS NULL);
 
 
+-- better solution
+COU
+
 
 
 
