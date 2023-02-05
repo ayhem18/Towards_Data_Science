@@ -1301,8 +1301,8 @@ class SumSignal(Signal):
 
     def evaluate(self, ts):
         """Evaluates the signal at the given times.
-
         ts: float array of times
+
 
         returns: float wave array
         """
