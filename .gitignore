@@ -1,3 +1,5 @@
 Programming_Tools/TensorFlow/datasets/
 *.ini
 *__pycache__
+signal_processing/uni_course/assignments/assignment_1.ipynb
+signal_processing/uni_course/assignments/assignment_1_copy.ipynb
