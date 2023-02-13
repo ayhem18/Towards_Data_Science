@@ -3,3 +3,9 @@ Programming_Tools/TensorFlow/datasets/
 *__pycache__
 signal_processing/uni_course/assignments/assignment_1.ipynb
 signal_processing/uni_course/assignments/assignment_1_copy.ipynb
+*.wav
+*.zip
+Machine_Learning/NLP/uni_NLP_course/assignments/file*
+*.rar
+\.idea
+Machine_Learning/NLP/uni_NLP_course/assignments/__MACOSX
