@@ -6,6 +6,13 @@ signal_processing/uni_course/assignments/assignment_1_copy.ipynb
 *.wav
 *.zip
 Machine_Learning/NLP/uni_NLP_course/assignments/file*
+Machine_Learning/NLP/uni_NLP_course/assignments/m.*
 *.rar
 \.idea
 Machine_Learning/NLP/uni_NLP_course/assignments/__MACOSX
+Machine_Learning/NLP/uni_NLP_course/assignments/botchan.txt
+Machine_Learning/NLP/uni_NLP_course/
+DataMining/
+# ignore all models
+*pth 
+*ph
