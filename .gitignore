@@ -16,3 +16,6 @@ DataMining/
 # ignore all models
 *pth 
 *ph
+signal_processing/ThinkDSP_book/__pycache__/
+signal_processing/uni_course/__pycache__/
+
