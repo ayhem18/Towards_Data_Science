@@ -108,7 +108,10 @@ def split_wave(wave: Wave, part_duration: float = 0.5) -> list[Wave]:
     # if the last split is too short, plug it to the last one
     if last_split_duration < part_duration:
         # this block will be executed only if the number of splits is at least 2. 
-        splits.pop()
+        try:
+            splits.pop()
+        except IndexError:
+            pass
         splits.append(wave.segment(start=(num_splits - 2) * part_duration))
     else:
         splits.append(wave.segment(start=(num_splits - 1) * part_duration))
