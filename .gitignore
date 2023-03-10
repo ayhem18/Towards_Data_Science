@@ -23,3 +23,5 @@ Programming_Tools/Pytorch/pytorch_data/
 signal_processing/uni_course/assignment_2/hw_2
 signal_processing/uni_course/assignment_2/Ayhem_Bouabid
 Programming_Tools/Pytorch/data
+# ignore any file with the name runs
+runs
