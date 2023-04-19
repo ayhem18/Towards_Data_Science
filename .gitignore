@@ -9,9 +9,10 @@ Machine_Learning/NLP/uni_NLP_course/assignments/file*
 Machine_Learning/NLP/uni_NLP_course/assignments/m.*
 *.rar
 \.idea
-Machine_Learning/NLP/uni_NLP_course/assignments/__MACOSX
-Machine_Learning/NLP/uni_NLP_course/assignments/botchan.txt
-Machine_Learning/NLP/uni_NLP_course/
+NLP/uni_NLP_course/assignments/__MACOSX
+NLP/uni_NLP_course/assignments/botchan.txt
+NLP/uni_NLP_course/
+NLP/nlp_env
 DataMining/
 # ignore all models
 *pth 
@@ -27,3 +28,5 @@ Programming_Tools/Pytorch/data
 runs
 *.png
 DataEngineering/BigData_Uni_course
+extra_env
+
