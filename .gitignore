@@ -24,9 +24,14 @@ Programming_Tools/Pytorch/pytorch_data/
 signal_processing/uni_course/assignment_2/hw_2
 signal_processing/uni_course/assignment_2/Ayhem_Bouabid
 Programming_Tools/Pytorch/data
+
+DataEngineering/BigData_Uni_course/assignments/a3/JIRA
 # ignore any file with the name runs
 runs
 *.png
-DataEngineering/BigData_Uni_course
 extra_env
-
+*.csv
+*.json
+*.zip
+*.txt
+*.tsv
