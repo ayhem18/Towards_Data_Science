@@ -58,7 +58,7 @@ print("#" * 100)
 
 
 df = spark.read.csv("GBvideos.csv", header=True)
-res = df.rdd.map(lambda x: (x['title'], x['views'])).filter(lambda x: x['views'] > 10 ** 6).take(5)
+res = df.rdd.map(lambda x: (x['title'], x['views'])).filter(lambda x: x[1] > 10 ** 6).take(5)
 print(res)
 
 
