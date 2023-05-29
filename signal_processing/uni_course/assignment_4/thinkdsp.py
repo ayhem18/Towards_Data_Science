@@ -955,7 +955,7 @@ class Wave:
         if full:
             hs = np.fft.fft(self.ys)
             fs = np.fft.fftfreq(n, d)
-        else:
+        else: 
             hs = np.fft.rfft(self.ys)
             fs = np.fft.rfftfreq(n, d)
 
