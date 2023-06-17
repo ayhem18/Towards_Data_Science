@@ -5,8 +5,7 @@ This script is written to prepare the Dogs VS cats dataset for modeling.
 import os
 from pathlib import Path
 from typing import Union
-import zipfile
-import shutil
+from pytorch_modular.directories_and_files import copy_directories, unzip_data_file
 
 HOME = os.getcwd()
 

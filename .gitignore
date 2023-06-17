@@ -37,3 +37,6 @@ extra_env
 *.tsv
 *.jpg
 signal_processing/uni_course/assignment_4/a4
+github_config.py
+github_config.ini
+
