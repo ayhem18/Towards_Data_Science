@@ -9,14 +9,18 @@ from torch.utils.tensorboard import SummaryWriter
 from pytorch_modular.pytorch_utilities import get_default_device, input_shape_from_dataloader
 from pytorch_modular.engine_classification import train_per_epoch, test_per_epoch, create_summary_writer
 from tqdm import tqdm
-import os
 
 
 class DVG_classifier(my_vgg):
+
     num_classes = 2
 
     def __init__(self, input_shape: tuple[int, int, int], *args, **kwargs):
         super().__init__(input_shape, num_classes=self.num_classes, *args, **kwargs)
+
+    # the forward function is the same as the base model
+    def forward(self, x: torch.tensor):
+        return super().forward(x)
 
 
 def train_model(model: DVG_classifier,
@@ -39,6 +43,8 @@ def train_model(model: DVG_classifier,
                "test_acc": []
                }
 
+    # set the model to the current device
+    model.to(device)
     # 3. Loop through training and testing steps for a number of epochs
     for epoch in tqdm(range(epochs)):
         train_loss, train_acc = train_per_epoch(model=model,

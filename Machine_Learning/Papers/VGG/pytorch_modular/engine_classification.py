@@ -9,7 +9,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from pytorch_utilities import get_default_device
+from .pytorch_utilities import get_default_device
 
 HOME = os.getcwd()
 
@@ -45,21 +45,17 @@ def train_per_epoch(model: nn.Module,
 
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
+        optimizer.zero_grad()
         # get the forward pass first
         y_pred = model(X)
 
         # calculate the loss
-        batch_loss = loss_fn(y_pred)
-
+        batch_loss = loss_fn(y_pred, y)
+        batch_loss.backward()
         # add the batch loss to the general training loss
-        train_loss += batch_loss.item()
-
-        optimizer.zero_grad()
-
-        batch_loss.backword()
-
         optimizer.step()
 
+        train_loss += batch_loss.item()
         y_pred_class = output_layer(y_pred)
 
         # calculate the different metrics needed:

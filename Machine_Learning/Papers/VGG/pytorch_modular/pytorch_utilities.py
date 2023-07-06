@@ -40,8 +40,12 @@ def __dimensions_after_conv(h: int, w: int, conv: nn.Conv2d) -> tuple[int, int]:
 
 
 def __dimensions_after_pool(h: int, w: int, pool: Union[nn.MaxPool2d, nn.AvgPool2d]) -> tuple[int, int]:
-    k1, k2 = pool.kernel_size
-    s1, s2 = pool.stride
+    # extract the kernel_size values first
+    kernel = pool.kernel_size if isinstance(pool.kernel_size, tuple) else (pool.kernel_size, pool.kernel_size)
+    k1, k2 = kernel
+    # extract the stride values second
+    stride = pool.stride if isinstance(pool.stride, tuple) else (pool.stride, pool.stride)
+    s1, s2 = stride
     return int((h - k1) / s1) + 1, int((w - k2) / s2) + 1
 
 

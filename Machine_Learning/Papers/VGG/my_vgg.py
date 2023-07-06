@@ -63,9 +63,9 @@ class my_vgg(nn.Module):
         self.logits = logits
 
         # 1st convolutional block
-        self.conv_block_1, block_output = self.conv_block(first_input=c, first_output=initial_num_filters)
-        self.conv_block_2, block_output = self.conv_block(first_input=block_output, first_output=block_output)
-        self.conv_block_3, block_output = self.conv_block(first_input=block_output, first_output=block_output)
+        self.conv_block_1, c1 = self.conv_block(first_input=c, first_output=initial_num_filters)
+        self.conv_block_2, c2 = self.conv_block(first_input=c1, first_output=c1)
+        self.conv_block_3, c3 = self.conv_block(first_input=c2, first_output=c2)
 
         # since the architecture of the network is parametric,
         # we need to define an additional attribute to use in the forward function call
@@ -75,7 +75,10 @@ class my_vgg(nn.Module):
         for module in self.conv:
             w, h = dimensions_block((w, h), module)
 
-        classifier_input = w * h * self.conv[-1].out_channels
+        # as we are flattening the output of the last conventional layer
+        # the input to the classifier is:
+        # width * height *  number of channels
+        classifier_input = w * h * self.conv[-1].conv2.out_channels
 
         # time for the classifier
         self.classifier = nn.Sequential(
@@ -91,8 +94,8 @@ class my_vgg(nn.Module):
             final_layer = nn.Softmax(dim=-1) if self.output_shape > 1 else nn.Sigmoid()
             self.classifier.append(final_layer)
 
-        def forward(x: torch.tensor):
-            for module in self.conv:
-                x = module(x)
+    def forward(self, x: torch.tensor):
+        for module in self.conv:
+            x = module(x)
 
-            return self.classifier(x)
+        return self.classifier(x)

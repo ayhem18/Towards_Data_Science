@@ -124,7 +124,8 @@ def train_NLM(model: NeuralLM, vocab: torchtext.vocab, train_data, train_data_si
 
 # let's write the driver's code
 def driver_code():
-    train_data, val_data, test_data = WikiText2(root='data') # this will create a directory called data where all the 'data' will be stored
+    # this will create a directory called data where all the 'data' will be stored
+    train_data, val_data, test_data = WikiText2(root='data')
     DATASET_SIZE = 36718 # check the documentation here: https://pytorch.org/text/stable/datasets.html#language-modeling
     vocab = build_vocabulary(train_data)
     language_model = NeuralLM(len(vocab))

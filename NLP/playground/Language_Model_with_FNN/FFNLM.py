@@ -110,7 +110,7 @@ def train_NLM(model: NeuralLM, vocab: torchtext.vocab, train_data, train_data_si
     model.to(device)
 
     for epoch in range(epochs):
-        for _, batch_data in enumerate(tqdm(train_dataloader, total = int(ceil(train_data_size / batch_size)))):
+        for _, batch_data in enumerate(tqdm(train_dataloader, total=int(ceil(train_data_size / batch_size)))):
             inputs = batch_data[0].to(device)
             labels = batch_data[1].to(device)
 
