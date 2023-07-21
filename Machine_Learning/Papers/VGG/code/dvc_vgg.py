@@ -9,10 +9,10 @@ from torch.utils.tensorboard import SummaryWriter
 from pytorch_modular.pytorch_utilities import get_default_device, input_shape_from_dataloader
 from pytorch_modular.engine_classification import train_per_epoch, test_per_epoch, create_summary_writer
 from tqdm import tqdm
+from functools import partial
 
 
 class DVG_classifier(my_vgg):
-
     num_classes = 2
 
     def __init__(self, input_shape: tuple[int, int, int], *args, **kwargs):
@@ -45,19 +45,23 @@ def train_model(model: DVG_classifier,
 
     # set the model to the current device
     model.to(device)
-    # 3. Loop through training and testing steps for a number of epochs
+    # make sure to define the loss function separately for the training part
+    # as the loss function should be the exact same object (to save the results of the back propagation each time)
+    train_loss_fn = nn.BCEWithLogitsLoss()
     for epoch in tqdm(range(epochs)):
+        print(f"Epoch n: {epoch + 1} started")
         train_loss, train_acc = train_per_epoch(model=model,
                                                 dataloader=train_dataloader,
-                                                loss_fn=nn.BCEWithLogitsLoss,
+                                                loss_fn=train_loss_fn,  # don't forget the parentheses
                                                 optimizer=optimizer,
-                                                output_layer=nn.Sigmoid,
+                                                output_layer=nn.Sigmoid(),
                                                 device=device)
-
+        # the test function can have a loss initiated in the call as it doesn't call the backwards function
+        # no back propagation takes place
         test_loss, test_acc = test_per_epoch(model=model,
                                              dataloader=test_dataloader,
-                                             loss_fn=nn.BCEWithLogitsLoss,
-                                             output_layer=nn.Sigmoid,
+                                             loss_fn=nn.BCEWithLogitsLoss(),  # don't forget the parentheses
+                                             output_layer=nn.Sigmoid(),
                                              device=device)
 
         if print_progress:

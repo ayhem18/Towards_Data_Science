@@ -44,13 +44,18 @@ def train_per_epoch(model: nn.Module,
     train_metrics = [0 for _ in metrics]
 
     for batch, (X, y) in enumerate(dataloader):
-        X, y = X.to(device), y.to(device)
+        X, y = X.to(device), y.to(torch.long).to(device)  # convert to Long Type
+
+        # make sure to un-squeeze 'y' if it is only 1 dimensions
+        if len(y.shape) == 1:
+            y = torch.unsqueeze(y, dim=-1)
+
         optimizer.zero_grad()
         # get the forward pass first
         y_pred = model(X)
 
         # calculate the loss
-        batch_loss = loss_fn(y_pred, y)
+        batch_loss = loss_fn(y_pred, y.float())
         batch_loss.backward()
         # add the batch loss to the general training loss
         optimizer.step()

@@ -4,6 +4,7 @@ from torch.optim import Adam
 import pytorch_modular.data_loaders as loaders
 import torchvision.transforms as T
 from pathlib import Path
+import torch
 
 
 if __name__ == '__main__':
@@ -26,9 +27,13 @@ if __name__ == '__main__':
                        T.ToTensor(),
                        ])
 
-    # now we have a small dataset and we can proceed
+    # since the problem is known to be binary, we create a collate function
+    # that adds an extra dimension to avoid the shape mismatch problem
+
+    # now we have a small test dataset, and we can proceed
+    # let's limit the number of files extracted to a mere 100 for faster training
     train_loader, test_loader, indices_to_names = loaders.create_dataloaders(TRAIN_DIR,
-                                                                             batch_size=5,
+                                                                             batch_size=20,
                                                                              train_transform=trans,
                                                                              test_dir=TEST_DIR,
                                                                              )
@@ -39,6 +44,6 @@ if __name__ == '__main__':
                 train_loader,
                 test_loader,
                 optimizer=optimizer,
-                epochs=30,
+                epochs=3,
                 print_progress=True
                 )
