@@ -29,6 +29,7 @@ DataEngineering/BigData_Uni_course/assignments/a3/JIRA
 # ignore any file with the name runs
 runs
 *.png
+!My_Research/images/*.png
 extra_env
 *.csv
 *.json
