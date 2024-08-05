@@ -1,4 +1,6 @@
--- this is my solutions for SQL ZOO SELECT FROM WORLD. THE PROBLEMS CAN BE FOUND THROUGH THE LINK: https://sqlzoo.net/wiki/SELECT_from_WORLD_Tutorial
+-- this SQL script contains my solutions for the SQL ZOO "SELECT FORM WORLD" problem set.
+-- THE PROBLEM SET CAN BE FOUND THROUGH THE LINK: https://sqlzoo.net/wiki/SELECT_from_WORLD_Tutorial
+-- PRETTY BASIC STUFF HERE
 
 -- PROBLEM 3
 SELECT name, GDP / population 
@@ -6,7 +8,7 @@ FROM world
 where population > 200000000;
 
 -- PROBLEM 4
-SELECT name, population / 1000000 AS "population_in_millions"
+SELECT name, (population / 1000000) AS "population_in_millions"
 FROM world
 WHERE LOWER(continent) = 'south america';
 

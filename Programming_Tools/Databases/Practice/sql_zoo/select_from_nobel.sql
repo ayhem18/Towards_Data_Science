@@ -42,15 +42,18 @@ SELECT *
 FROM nobel
 WHERE (yr < 1910 AND subject = 'Medicine') OR (yr >= 2004 AND subject = 'Literature');
 
--- PROBLEM 11
-SELECT * 
-FROM nobel
-WHERE winner = 'PETER GRÜNBERG'; -- just copy past the letter from the link attached to the problem
 
--- PROBLEM 12
-SELECT * 
-FROM nobel
-WHERE winner = 'EUGENE O\'NEILL';
+-- these two problems aren't particularly interesing
+
+-- -- PROBLEM 11
+-- SELECT * 
+-- FROM nobel
+-- WHERE winner = 'PETER GRÜNBERG'; -- just copy past the letter from the link attached to the problem
+
+-- -- PROBLEM 12
+-- SELECT * 
+-- FROM nobel
+-- WHERE winner = 'EUGENE O\'NEILL';
 
 
 -- PROBLEM 13
