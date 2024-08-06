@@ -26,3 +26,5 @@ VALUES
 ("Angola", "Africa", 1246700, 19183590, 116308000000, "Luanda"), 
 ("Antigua and Barbuda", "Caribbean", 442, 86295, 1176000000, "St. John's"),
 ("Germany",	"Europe",	357114, 80716000, 3425956000000, "Berlin");
+
+
