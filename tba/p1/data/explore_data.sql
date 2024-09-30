@@ -13,23 +13,8 @@ FROM
 	from order_busket as ob
 	JOIN products as p 
 	on ob.id = p.id
--- 	LIMIT 10;
-)as temp
+) as temp;
 	
--- at this point we know that the order_busket id is the same as the product instance id
--- we just need to match them
-
-SELECT order_date, store_id, product_id, product_date, price, planned_prep_time 
-FROM (SELECT order_id, date_create as "order_date", planned_prep_time FROM order_history ) as oh
-JOIN 
-( 
-	SELECT * FROM order_busket as ob
-	JOIN (SELECT id, date_create as "product_date" FROM products) as p
-	ON p.id = ob.id 
-) as p
-
-ON p.order_id = oh.order_id
-LIMIT 20;
 
 --  finding the start and finish prep times
 SELECT order_id, max(value) as "finish_prep_date",  min(value) as "start_prep_date"
@@ -44,31 +29,39 @@ LIMIT 100;
 
 -- join the 'order_history' table with the 'order_busket' 
 
-
 SELECT 
-order_id, finish_prep_date, start_prep_date, planned_prep_time, store_id, order_id, product_id, price
+e.order_id, e.finish_prep_date, e.start_prep_date, e.planned_prep_time, e.store_id, e.product_id, e.price, p.date_create as "product_creation_date"
 
-FROM 
-(
-	SELECT order_id, finish_prep_date, start_prep_date, planned_prep_time
-	from order_history as oh
-	join 
+FROM (
+	SELECT 
+	e.order_id, finish_prep_date, start_prep_date, planned_prep_time, store_id, product_id, price
+
+	FROM 
 	(
-		SELECT order_id, max(value) as "finish_prep_date",  min(value) as "start_prep_date"
-		from 
-			(
-				SELECT * from order_props_value 
-				where ORDER_PROPS_ID IN (97, 95)
-			)
-		GROUP BY order_id
-	) as order_times
+		SELECT oh.order_id, finish_prep_date, start_prep_date, planned_prep_time
+		from order_history as oh
+		join 
+		(
+			SELECT order_id, max(value) as "finish_prep_date",  min(value) as "start_prep_date"
+			from 
+				(
+					SELECT * from order_props_value 
+					where ORDER_PROPS_ID IN (97, 95)
+				)
+			GROUP BY order_id
+		) as order_times
+		
+		on oh.order_id = order_times.order_id
+		
+	) as e
 
-	using order_id
+	JOIN order_busket as ob
+	on ob.order_id = e.order_id
 ) as e
 
-JOIN order_busket as ob
-on ob.order_id = e.order_id;
+LEFT JOIN products as p
 
+ON e.product_id = p.product_id;
 
 
 SELECT * from order_props LIMIT 10;
