@@ -53,6 +53,5 @@ env
 tds_env
 
 
-
-
+*.db 
 
