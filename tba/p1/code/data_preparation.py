@@ -21,43 +21,50 @@ DATA_FOLDER = os.path.join(current, 'data')
 # the sql query: 
 
 # DATA_PREP_SQL_QUERY = """
-# SELECT 
-# e.order_id, e.finish_prep_date, e.start_prep_date, e.planned_prep_time, e.store_id, e.product_id, e.price, p.date_create as "product_creation_date"
+# SELECT orders.order_id, orders.start_prep_date, orders.finish_prep_date, orders.profit, orders.delivery_distance, oh.STATUS_ID, oh.planned_prep_time, ob.product_id, ob.store_id, ob.price
 
 # FROM (
-# 	SELECT 
-# 	e.order_id, finish_prep_date, start_prep_date, planned_prep_time, store_id, product_id, price
+# 	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
 
-# 	FROM 
-# 	(
-# 		SELECT oh.order_id, finish_prep_date, start_prep_date, planned_prep_time
-# 		from order_history as oh
-# 		join 
-# 		(
-# 			SELECT order_id, max(value) as "finish_prep_date",  min(value) as "start_prep_date"
-# 			from 
-# 				(
-# 					SELECT * from order_props_value 
-# 					where ORDER_PROPS_ID IN (97, 95)
-# 				)
-# 			GROUP BY order_id
-# 		) as order_times
-		
-# 		on oh.order_id = order_times.order_id
-		
-# 	) as e
+# 	from order_props_value as o1 
 
-# 	JOIN order_busket as ob
-# 	on ob.order_id = e.order_id
-# ) as e
+# 	JOIN order_props_value as o2  
+# 	ON o1.ORDER_PROPS_ID = 95 and (not o1.value is null) -- choose a finish_prep_date that is not null
+# 	and o2.ORDER_PROPS_ID= 97 and (not o2.value is Null) -- choose a start_prep_date that is not null
+# 	and o1.order_id = o2.order_id
 
-# LEFT JOIN products as p
+# 	JOIN order_props_value as o3
+# 	ON o3.ORDER_PROPS_ID = 77 and o1.ORDER_ID = O3.order_id
 
-# ON e.product_id = p.product_id;
+# 	JOIN order_props_value as o4
+# 	ON o4.ORDER_PROPS_ID = 65 AND O1.order_id = o4.order_id
+# ) as orders
+
+# JOIN order_history as oh
+# ON oh.order_id = orders.order_id
+
+# JOIN (SELECT store_id, product_id, order_id, price from order_busket) as ob
+# on ob.order_id = orders.order_id
 # """
 
+
 DATA_PREP_SQL_QUERY = """
-SELECT orders.order_id, orders.start_prep_date, orders.finish_prep_date, orders.profit, orders.delivery_distance, oh.STATUS_ID, oh.planned_prep_time, ob.product_id, ob.store_id, ob.price
+SELECT orders.order_id, 
+
+(CASE orders.start_prep_date <= orders.finish_prep_date WHEN 1 THEN orders.start_prep_date ELSE orders.finish_prep_date end) as "start_prep_date", 
+
+(CASE orders.finish_prep_date <= orders.start_prep_date WHEN 1 THEN orders.start_prep_date ELSE orders.finish_prep_date end) as "finish_prep_date",
+
+-- orders.start_prep_date, orders.finish_prep_date, 
+
+orders.profit, 
+orders.delivery_distance, 
+
+oh.STATUS_ID, 
+oh.planned_prep_time, 
+ob.product_id, 
+ob.store_id, 
+ob.price
 
 FROM (
 	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
@@ -97,6 +104,12 @@ def data_to_df(db_path_file: Union[str, Path],
 	connection = sq.connect(db_path_file)
 	# execute the query 
 	data_df = pd.read_sql_query(DATA_PREP_SQL_QUERY, connection)
+
+	data_df['price'] = data_df['price'].round(decimals=3)
+
+	# lower case the column names
+	data_df.columns = [c.lower() for c in data_df.columns]
+
 	# close the connection
 	connection.close()
 

@@ -91,7 +91,8 @@ ON o2.ORDER_PROPS_ID = 77 and o1.order_id = o2.order_id
 
 -- just to make sure the reasoning and the code is correct
 SELECT COUNT(DISTINCT(order_id)) FROM order_props_value;
-SELECT COUNT(order_id) from 
+
+SELECT COUNT(start_prep_date) as c1, COUNT(finish_prep_date) as c2 from 
 (
 	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
 	from order_props_value as o1 
@@ -118,8 +119,27 @@ from order_history;
 SELECT COUNT(order_id) from order_history;
 
 
+SELECT orders.order_id, orders.start_prep_date, orders.finish_prep_date, orders.profit, orders.delivery_distance, oh.STATUS_ID, oh.planned_prep_time, ob.product_id, ob.store_id, ob.price
 
+FROM (
+	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
+	from order_props_value as o1 
 
+	JOIN order_props_value as o2  
+	ON o1.ORDER_PROPS_ID = 95 and o2.ORDER_PROPS_ID= 97 and o1.order_id = o2.order_id
+
+	JOIN order_props_value as o3
+	ON o3.ORDER_PROPS_ID = 77 and o1.ORDER_ID = O3.order_id
+
+	JOIN order_props_value as o4
+	ON o4.ORDER_PROPS_ID = 65 AND O1.order_id = o4.order_id
+) as orders
+
+JOIN order_history as oh
+ON oh.order_id = orders.order_id
+
+JOIN (SELECT store_id, product_id, order_id, price from order_busket) as ob
+on ob.order_id = orders.order_id
 
 
 
