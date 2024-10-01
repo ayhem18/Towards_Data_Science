@@ -106,6 +106,7 @@ def data_to_df(db_path_file: Union[str, Path],
 	data_df = pd.read_sql_query(DATA_PREP_SQL_QUERY, connection)
 
 	data_df['price'] = data_df['price'].round(decimals=3)
+	data_df['profit'] = data_df['profit'].round(decimals=3)
 
 	# lower case the column names
 	data_df.columns = [c.lower() for c in data_df.columns]
