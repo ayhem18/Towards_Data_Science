@@ -42,7 +42,7 @@ FROM (
 		from order_history as oh
 		join 
 		(
-			SELECT order_id, max(value) as "finish_prep_date",  min(value) as "start_prep_date"
+			SELECT order_id, max(value) as "finish_prep_date",  min(value) as "start_prep_date", 
 			from 
 				(
 					SELECT * from order_props_value 
@@ -66,6 +66,56 @@ ON e.product_id = p.product_id;
 
 SELECT * from order_props LIMIT 10;
 SELECT * from order_props_value LIMIT 10;
+
+
+-- each order has all the prop information needed
+SELECT MAX(count) as "max_order_instances", MIN(count) as "min_order_instances" from 
+(
+	SELECT order_id, COUNT(*) as "count" 
+	from order_props_value
+	GROUP BY order_id
+	
+)as e
+
+SELECT o1.order_id, o1.start_prep_date, o1.finish_prep_date, o2.value as "profit"
+from (
+	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date"
+	from order_props_value as o1 
+	JOIN order_props_value as o2 
+	ON o1.ORDER_PROPS_ID = 95 and o2.ORDER_PROPS_ID= 97 and o1.order_id = o2.order_id
+) as o1
+
+JOIN order_props_value as o2
+ON o2.ORDER_PROPS_ID = 77 and o1.order_id = o2.order_id
+
+
+-- just to make sure the reasoning and the code is correct
+SELECT COUNT(DISTINCT(order_id)) FROM order_props_value;
+SELECT COUNT(order_id) from 
+(
+	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
+	from order_props_value as o1 
+
+	JOIN order_props_value as o2  
+	ON o1.ORDER_PROPS_ID = 95 and o2.ORDER_PROPS_ID= 97 and o1.order_id = o2.order_id
+
+	JOIN order_props_value as o3
+	ON o3.ORDER_PROPS_ID = 77 and o1.ORDER_ID = O3.order_id
+
+	JOIN order_props_value as o4
+	ON o4.ORDER_PROPS_ID = 65 AND O1.order_id = o4.order_id
+)
+as orders
+
+
+-- let's inspect the order_history a bit more
+SELECT max(status_id), min(status_id) from order_history;
+
+SELECT SUM(CASE STATUS_ID When 'F' THEN 1 ELSE 0 END ) as "f_count", 
+SUM(CASE STATUS_ID When 'C' THEN 1 ELSE 0 END ) as "c_count" 
+from order_history;
+
+SELECT COUNT(order_id) from order_history;
 
 
 
