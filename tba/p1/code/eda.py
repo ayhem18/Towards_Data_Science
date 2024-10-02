@@ -111,13 +111,33 @@ def build_product_id_prep_time_estimation(df_train: pd.DataFrame) -> Tuple[pd.Da
     return freq_prod_y_stats, freq_prod_orders
 
 
-    f_est = pd.pivot_table(freq_prod_orders_, 
-                           index='order_id', 
-                           values=['y', 'mean', 'median'], 
-                           aggfunc='max')
+def select_popular_stores(df: pd.DataFrame, popular_threshold:int) -> List[int]:
+    # make sure the dataframe contains the necessary columns
+    if not set(['store_id', 'order_id']).issubset(set(df.columns.tolist())):
+        raise ValueError(f"The dataframe is expected to have columns {['product_id', 'order_id']}")
 
-    # rename
-    f_est.rename(columns={"mean": "y_mean_est", "median": "y_median_est"}, inplace=True)
+    store_counts = pd.pivot_table(df, index='store_id', values='order_id', aggfunc='count')['order_id'].sort_values(ascending=False)
+    return store_counts[store_counts >= popular_threshold].index.tolist()
 
-    return f_est, 
 
+def build_store_id_deviation_estimation(df: pd.DataFrame) -> pd.DataFrame:
+    TRAIN_POPULAR_STORES = select_popular_stores(df, popular_threshold=25)
+    
+    # extract the frequent store data
+    freq_store_df = df[df['store_id'].isin(TRAIN_POPULAR_STORES)]
+
+    order_data = pd.pivot_table(freq_store_df, index='order_id', values=['y', 'planned_prep_time', 'store_id'], aggfunc='mean')
+
+    order_data['y_deviation'] = order_data['y'] - order_data['planned_prep_time']
+    # aggregate through store ids
+    store_data = pd.pivot_table(order_data, index='store_id', values=['y_deviation'], aggfunc='mean')
+
+    return store_data
+
+
+def extract_prep_time_features(df: pd.DataFrame) -> pd.DataFrame:
+    # extract the day of the week and hours from    
+    df['order_hour'] = df['start_prep_date'].dt.hour
+    df['order_day'] = df['start_prep_date'].dt.day_name().map({'Monday':0, 'Tuesday':1, 'Wednesday':2, 'Thursday':3, 'Friday':4, 'Saturday':5, 'Sunday':6})
+    df.drop(columns='start_prep_date', inplace=True)
+    return df
