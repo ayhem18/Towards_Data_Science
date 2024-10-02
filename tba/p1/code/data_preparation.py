@@ -194,7 +194,7 @@ def prepare_labels(df: pd.DataFrame) -> pd.DataFrame:
 	# calculate the actual preparation time: 'y'
 	df['y'] = (df['finish_prep_date'] - df['start_prep_date']).dt.total_seconds() // 60
 	
-	return df
+	# return df
 	# remove the 'finish_prep_date' columns
 	return df.drop(['finish_prep_date'], axis='columns')
 
