@@ -55,4 +55,7 @@ tds_env
 
 *.db 
 *.ob
+*.pt
+*.pth 
+
 

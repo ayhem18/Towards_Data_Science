@@ -8,6 +8,7 @@ from pathlib import Path
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+# from torch.optim.sgd import SGD 
 
 from models import evaluate_reg_model
 
@@ -97,6 +98,33 @@ class DataFrameDs(Dataset):
         return len(self.X_train)
 
 
+
+def predict(net: Network, X_test, y_test) -> np.ndarray:
+    ds = DataFrameDs(X_test, y_test)
+    dl = DataLoader(ds, batch_size=512, shuffle=False, drop_last=False)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # set the network to the evaluation model
+    net.eval()
+
+    y_pred = None
+    with torch.no_grad():
+        for x, _ in dl:
+            x = x.to(device)
+            y_hat = net.forward(x).cpu().numpy()
+            
+            if y_hat.ndim == 1:
+                y_hat = np.expand_dims(y_hat, axis=-1)
+
+            if y_pred is None:
+                y_pred = y_hat
+            else:
+                y_pred = np.concatenate([y_pred, y_hat], axis=0)
+
+    y_pred = y_pred.squeeze()
+    return y_pred
+
+
 def train_ann(X_train: pd.DataFrame, 
               y_train: pd.DataFrame,
               X_test: pd.DataFrame,
@@ -108,16 +136,15 @@ def train_ann(X_train: pd.DataFrame,
 
     net = Network(in_features=X_train.shape[1], 
                   hidden_units=ann_hidden_units, 
-                  dropout=0.2)
+                  dropout=0)
 
     # dataset
     train_ds = DataFrameDs(X_train, y_train)
     train_dl = DataLoader(train_ds, batch_size=512, shuffle=True, drop_last=True)
 
-    test_ds = DataFrameDs(X_test, y_test)
-    test_dl = DataLoader(test_ds, batch_size=512, shuffle=True, drop_last=False)
 
-    optimizer = Adam(net.parameters(), lr=0.01, weight_decay=10**-3)
+    # optimizer = SGD(net.parameters(), lr=0.001, momentum=0.99)
+    optimizer = Adam(net.parameters(), lr=0.01)
 
     loss = torch.nn.MSELoss()
 
@@ -148,42 +175,31 @@ def train_ann(X_train: pd.DataFrame,
 
         epoch_loss /= len(train_dl)
         print(f"epoch: {i + 1}: train loss: {epoch_loss}")
+        train_metrics[f"train_loss_epoch_ {i + 1}"] = epoch_loss
 
-        train_metrics[i] = epoch_loss
+    # predict on the train dataset
+    y_train_pred = predict(net, X_train, y_train)
+    y_test_pred = predict(net, X_test, y_test)
 
-    # set the network to the evaluation model
-    net.eval()
-    y_pred = None
-
-    with torch.no_grad():
-        for x, _ in test_dl:
-            x = x.to(device)
-            y_hat = net.forward(x).cpu().numpy()
-            
-            if y_hat.ndim == 1:
-                y_hat = np.expand_dims(y_hat, axis=-1)
-
-            if y_pred is None:
-                y_pred = y_hat
-            else:
-                y_pred = np.concatenate([y_pred, y_hat], axis=0)
-
-    y_pred = y_pred.squeeze()
     # compute the test_metrics
-    test_metrics = evaluate_reg_model(x_test=X_test, y_test=y_test, y_pred=y_pred)
+    train_metrics.update(evaluate_reg_model(X_train, y_train, y_pred=y_train_pred))
+    test_metrics = evaluate_reg_model(x_test=X_test, y_test=y_test, y_pred=y_test_pred)
 
     model_name = 'ann'
     if save_model_path is None:
         save_dir = os.path.join(DATA_FOLDER, 'models', model_name)        
         os.makedirs(save_dir, exist_ok=True)
-        save_model_path = os.path.join(save_dir, f'{model_name}.ob')
+        save_model_path = os.path.join(save_dir, f'{model_name}.pt')
 
     train_metrics_save_path, test_metrics_save_path = (os.path.join(Path(save_model_path).parent, f'{model_name}_train_metrics.ob'), 
                                                         os.path.join(Path(save_model_path).parent, f'{model_name}_test_metrics.ob'))
 
     for obj, path in [(net, save_model_path), (train_metrics, train_metrics_save_path), (test_metrics, test_metrics_save_path)]:
-        with open(path, 'wb') as f:
-            pickle.dump(obj, f)
+        if isinstance(obj, torch.nn.Module):
+            torch.save(net.state_dict(), path)
+        else:
+            with open(path, 'wb') as f:
+                pickle.dump(obj, f)
 
     return net, train_metrics, test_metrics
 
@@ -199,5 +215,8 @@ if __name__ == '__main__':
                                                  y_train=y_train, 
                                                  X_test=df_test, 
                                                  y_test=y_test,
-                                                 ann_hidden_units=[128, 32, 8], 
-                                                 num_epochs=10)
+                                                 ann_hidden_units=[512, 256, 32], 
+                                                 num_epochs=3)
+
+    print(train_metrics)
+    print(test_metrics)

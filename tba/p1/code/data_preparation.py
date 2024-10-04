@@ -9,6 +9,7 @@ from typing import Union, List, Tuple
 from pathlib import Path 
 from sklearn.model_selection import train_test_split
 
+import data_processing as pro
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 current = SCRIPT_DIR
@@ -17,37 +18,7 @@ while 'data' not in os.listdir(current):
 
 DATA_FOLDER = os.path.join(current, 'data')
 
-
-# the sql query: 
-
-# DATA_PREP_SQL_QUERY = """
-# SELECT orders.order_id, orders.start_prep_date, orders.finish_prep_date, orders.profit, orders.delivery_distance, oh.STATUS_ID, oh.planned_prep_time, ob.product_id, ob.store_id, ob.price
-
-# FROM (
-# 	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
-
-# 	from order_props_value as o1 
-
-# 	JOIN order_props_value as o2  
-# 	ON o1.ORDER_PROPS_ID = 95 and (not o1.value is null) -- choose a finish_prep_date that is not null
-# 	and o2.ORDER_PROPS_ID= 97 and (not o2.value is Null) -- choose a start_prep_date that is not null
-# 	and o1.order_id = o2.order_id
-
-# 	JOIN order_props_value as o3
-# 	ON o3.ORDER_PROPS_ID = 77 and o1.ORDER_ID = O3.order_id
-
-# 	JOIN order_props_value as o4
-# 	ON o4.ORDER_PROPS_ID = 65 AND O1.order_id = o4.order_id
-# ) as orders
-
-# JOIN order_history as oh
-# ON oh.order_id = orders.order_id
-
-# JOIN (SELECT store_id, product_id, order_id, price from order_busket) as ob
-# on ob.order_id = orders.order_id
-# """
-
-
+# the sql query
 DATA_PREP_SQL_QUERY = """
 SELECT orders.order_id, 
 
@@ -94,8 +65,12 @@ on ob.order_id = orders.order_id
 def data_to_df(db_path_file: Union[str, Path], 
                df_save_file: Union[str, Path],
                overwrite: bool=False
-               ) -> pd.DataFrame:
-
+               ) -> pd.DataFrame:	
+	"""This function loads the initial data either by applying an sql query to the database file
+	or loading it from a csv file
+	Returns:
+		pd.DataFrame: the initial / original data
+	"""
 	if os.path.isfile(df_save_file) and not overwrite: 
 		# read the file
 		return pd.read_csv(df_save_file, index_col=None)
@@ -119,6 +94,43 @@ def data_to_df(db_path_file: Union[str, Path],
 	return data_df
 
 
+def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
+	# convert both 'dates' to datetime objects
+	df['finish_prep_date'] = pd.to_datetime(df['finish_prep_date'])
+	df['start_prep_date'] = pd.to_datetime(df['start_prep_date'])
+
+	# calculate the actual preparation time: 'y'
+	df['y'] = (df['finish_prep_date'] - df['start_prep_date']).dt.total_seconds() // 60
+	
+	# remove the 'finish_prep_date' columns
+	return df.drop(['finish_prep_date'], axis='columns')
+
+
+def prepare_all_data(df: pd.DataFrame) -> pd.DataFrame:
+	"""
+	1. compute labels
+	2. remove samples y = 0
+	3. remove samples with `planned_prep_time` missing 
+	"""
+	
+	# first step compute the labels
+	df = compute_labels(df)
+	assert len(df[df['y'] < 0 ]) == 0, "There are samples with negative preparation time"
+
+	# remove any samples with a prep time equal to 0
+	zero_prep_time = df[df['y'] == 0]
+	print("zero prep time portion: ", len(zero_prep_time) / len(df)) # 0.1% of the data
+	df = df[df['y'] > 0]
+
+	# first compute the ratio of samples missing 'planned_prep_time' values 
+	samples_with_missing = pro.samples_with_missing_data(df, columns=['planned_prep_time'], missing_data_rel='or', objective='locate')
+	print(f"ratio of samples with missing `planned_prep_time`: {len(samples_with_missing) / len(df)}") 
+	
+	# we are barely losing any data...
+	df = pro.samples_with_missing_data(df, columns=['planned_prep_time'], missing_data_rel='or', objective='remove')
+	return df
+
+
 def df_split(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	if not np.isclose(np.sum(splits), 1) or len(splits) != 2:
 		raise ValueError(f"Expected splits with two elements summing up to '1'")
@@ -135,7 +147,6 @@ def df_split(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFram
 	
 	df1, df2 = df[df['order_id'].isin(oids_set1)], df[df['order_id'].isin(oids_set2)]
 
-
 	# few assertions to make sure the code works as expected
 	perfect_split_ratio = round(max_split / min_split, 4)
 	assert np.isclose(len(df1) / len(df2), perfect_split_ratio, rtol=10 ** -2), f"Make sure the split ratio is close to {perfect_split_ratio}"
@@ -143,76 +154,21 @@ def df_split(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFram
 	return df1, df2
 
 
-def samples_with_missing_data(df: pd.DataFrame, 
-							  columns: List[str] | Tuple[str], 
-							  missing_data_rel: str = 'or',
-							  objective: str = 'remove',
-							  ) -> pd.DataFrame:
-
-	if missing_data_rel not in ['or', 'and']:
-		raise NotImplementedError("The current function consideres only logical 'or' / 'and'")
-
-	if isinstance(columns, str):
-		columns = [columns]
-
-	if not set(columns).issubset(set(list(df.columns))):
-		raise ValueError(
-					(f"The passed columns: {columns} do not represent a subset of the columns of the dataframe\n" 
-				   f"Extra columns: {list(set(columns).difference(set(df.columns)))}")
-				   )
-
-	# the idea here is simple, first extract the 'na' mask
-	na_mask = df.isna()
-
-	# compute the number of 'na' values in for each sample
-	na_per_sample:pd.Series = na_mask.loc[:, columns].sum(axis=1)
-	
-	# if the relation is 'or', then select the samples with at least one 'na' value
-	# if the relation is 'and' them select the samples with all 'na'
-
-	if missing_data_rel == 'or':
-		selection_mask = (na_per_sample >= 1)
-	else:
-		selection_mask = (na_per_sample == len(columns))
-
-	# proceed depending on whether we would like to locate the missing samples, or remove them from the original dataframe 
-	
-	if objective == 'remove':
-		selection_mask = selection_mask[selection_mask == True].index
-		return df.drop(selection_mask, axis='index')
-		
-	selection_mask = selection_mask.values
-	# select the samples
-	return df.loc[selection_mask, :]
-
-
-def prepare_labels(df: pd.DataFrame) -> pd.DataFrame:
-	# convert both 'dates' to datetime objects
-	df['finish_prep_date'] = pd.to_datetime(df['finish_prep_date'])
-	df['start_prep_date'] = pd.to_datetime(df['start_prep_date'])
-
-	# calculate the actual preparation time: 'y'
-	df['y'] = (df['finish_prep_date'] - df['start_prep_date']).dt.total_seconds() // 60
-	
-	# return df
-	# remove the 'finish_prep_date' columns
-	return df.drop(['finish_prep_date'], axis='columns')
-
 
 if __name__ == '__main__':
-	db_file = os.path.join(DATA_FOLDER, 'F24.ML.Assignment.One.data.db')
-	df_save_file = os.path.join(DATA_FOLDER, 'data.csv')
-	df = data_to_df(db_file, df_save_file)
-	# samples_with_missing = samples_with_missing_data(df, columns=['finish_prep_date', 'start_prep_date', 'planned_prep_time'], missing_data_rel='or', objective='locate')
-	# print(f"ratio: {len(samples_with_missing) / len(df)}") 
-	df = samples_with_missing_data(df, columns=['finish_prep_date', 'start_prep_date', 'planned_prep_time'], missing_data_rel='or', objective='remove')
-	df = prepare_labels(df)
-	df_train, df_test = df_split(df, splits=(0.9, 0.1))
+	# db_file = os.path.join(DATA_FOLDER, 'F24.ML.Assignment.One.data.db')
+	# df_save_file = os.path.join(DATA_FOLDER, 'data.csv')
+	# df = data_to_df(db_file, df_save_file)
+	# # samples_with_missing = samples_with_missing_data(df, columns=['finish_prep_date', 'start_prep_date', 'planned_prep_time'], missing_data_rel='or', objective='locate')
+	# # print(f"ratio: {len(samples_with_missing) / len(df)}") 
+	# df = samples_with_missing_data(df, columns=['finish_prep_date', 'start_prep_date', 'planned_prep_time'], missing_data_rel='or', objective='remove')
+	# df = prepare_labels(df)
+	# df_train, df_test = df_split(df, splits=(0.9, 0.1))
 
-	# pd.pivot_table(df, values=['price'], index='product_id', aggfunc=['min', 'median', 'min'])
-	product_price_train = pd.pivot_table(df_train, values=['price'], index='product_id', aggfunc=['min', 'median', 'mean'])
+	# # pd.pivot_table(df, values=['price'], index='product_id', aggfunc=['min', 'median', 'min'])
+	# product_price_train = pd.pivot_table(df_train, values=['price'], index='product_id', aggfunc=['min', 'median', 'mean'])
 
-	# choose samples that have nan values for every aggregate function
-	products_no_price_train = samples_with_missing_data(product_price_train, columns=[('mean', 'price')], missing_data_rel='and', objective='locate')
-	products_no_price_train.head()
-
+	# # choose samples that have nan values for every aggregate function
+	# products_no_price_train = samples_with_missing_data(product_price_train, columns=[('mean', 'price')], missing_data_rel='and', objective='locate')
+	# products_no_price_train.head()
+	pass
