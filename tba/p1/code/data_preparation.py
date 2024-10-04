@@ -106,7 +106,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
 	return df.drop(['finish_prep_date'], axis='columns')
 
 
-def prepare_all_data(df: pd.DataFrame) -> pd.DataFrame:
+def prepare_all_data_regression(df: pd.DataFrame) -> pd.DataFrame:
 	"""
 	1. compute labels
 	2. remove samples y = 0
@@ -131,7 +131,16 @@ def prepare_all_data(df: pd.DataFrame) -> pd.DataFrame:
 	return df
 
 
-def df_split(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def prepare_all_data_classification(df: pd.DataFrame) -> pd.DataFrame:
+	# same preparation as regression just with 
+	df = prepare_all_data_regression(df)
+	df['y_cls'] = ((df['y'] - df['planned_prep_time']).abs() <= 5).astype(int)
+	# # drop the actual preparation time
+	# return df.drop(columns=['y']).rename(columns={"y_cls": "y"})
+	return df
+
+
+def df_split_regression(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	if not np.isclose(np.sum(splits), 1) or len(splits) != 2:
 		raise ValueError(f"Expected splits with two elements summing up to '1'")
 
@@ -145,6 +154,39 @@ def df_split(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFram
 	# split the order_ids
 	oids_set1, oids_set2 = train_test_split(order_ids, test_size=min_split, random_state=69,)
 	
+	df1, df2 = df[df['order_id'].isin(oids_set1)], df[df['order_id'].isin(oids_set2)]
+
+	# few assertions to make sure the code works as expected
+	perfect_split_ratio = round(max_split / min_split, 4)
+	assert np.isclose(len(df1) / len(df2), perfect_split_ratio, rtol=10 ** -2), f"Make sure the split ratio is close to {perfect_split_ratio}"
+
+	return df1, df2
+
+
+
+def df_split_classification(df: pd.DataFrame, splits: Tuple[float, float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+	if not np.isclose(np.sum(splits), 1) or len(splits) != 2:
+		raise ValueError(f"Expected splits with two elements summing up to '1'")
+
+	min_split, max_split = sorted(splits)
+
+	if 'order_id' not in df.columns:
+		raise ValueError(f"The dataframe is expected to have the 'order_id' column. Found: {df.columns}")
+	
+
+	unique_orders = df.drop_duplicates(subset=['order_id'])
+
+	orders_and_labels = unique_orders[['order_id', 'y_cls']] 
+
+	# split the order_ids
+	set1, set2 = train_test_split(orders_and_labels, 
+								test_size=min_split, 
+								random_state=69, 
+								stratify=orders_and_labels['y_cls'], # make sure to have the distributions of 'y_cls' values are proportional between both splits...
+								)
+	
+	oids_set1, oids_set2 = set1['order_id'].tolist(), set2['order_id'].tolist()
+
 	df1, df2 = df[df['order_id'].isin(oids_set1)], df[df['order_id'].isin(oids_set2)]
 
 	# few assertions to make sure the code works as expected

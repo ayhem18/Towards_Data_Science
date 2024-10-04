@@ -20,10 +20,24 @@ while 'data' not in os.listdir(current):
 DATA_FOLDER = os.path.join(current, 'data')
 
 
-def sanity_check(df_train: pd, df_test, df_train_, df_test_):
+def sanity_check(df_train: pd.DataFrame, 
+				 df_test: pd.DataFrame, 
+				 df_train_: pd.DataFrame, 
+				 df_test_: pd.DataFrame, 
+				 check_nans: bool=False):
 	# make sure the new operations did not remove any samples by mistake
 	assert len(df_train_) == len(df_train), f"Some train samples were removed. Before: {len(df_train)}, After: {len(df_train_)}"
 	assert len(df_test_) == len(df_test), f"Some test samples were removed. Before: {len(df_test)}, After: {len(df_test_)}"
+	
+	if df_train.columns.tolist() == df_train_.columns.tolist():
+		assert all(df_train != df_train_), "Make sure not to pass the same version to both parameters"
+	
+	if df_test.columns.tolist() == df_test_.columns.tolist():
+		assert all(df_test != df_test_), "Make sure not to pass the same version to both parameters"
+
+	if check_nans:
+		assert df_train_.isna().sum().sum() == 0, "no missing values allowed"
+		assert df_test_.isna().sum().sum() == 0, "no missing values allowed"
 
 
 def samples_with_missing_data(df: pd.DataFrame, 
@@ -99,6 +113,22 @@ def impute_prices(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Dat
 	return df_train_, df_test_
 
 
+def impute_price_with_median_single_df(df: pd.DataFrame, median_imputer: SimpleImputer = None) -> Tuple[pd.DataFrame, SimpleImputer]:
+	if median_imputer is None:
+		median_imputer = SimpleImputer(strategy='median')
+		df.loc[:, ['price']] = median_imputer.fit_transform(df.loc[:, ['price']])
+	else:
+		df.loc[:, ['price']] = median_imputer.transform(df.loc[:, ['price']])
+
+	return df, median_imputer
+	
+def impute_price_with_median(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+	df_train_, imputer = impute_price_with_median_single_df(df_train)
+	df_test_, _ = impute_price_with_median_single_df(df_test, imputer)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=False)
+	return df_train_, df_test_
+
+
 def aggregate_profit_by_store_product(df: pd.DataFrame) -> pd.DataFrame:
 	# the minimum aggregation function is the best estimation we have of the profit a store makes on a specific product
 	return pd.pivot_table(df, values=['profit'], index=['store_id', 'product_id'], aggfunc='min').rename(columns={"profit": "profit_agg"})
@@ -139,7 +169,7 @@ def impute_profit(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Dat
 	# use the statistics of the train data to impute the test data
 	df_test_, _ = impute_profit_single_df(df_test, store_profit_by_prod=store_profit_by_prod_train)  
 
-	sanity_check(df_train, df_test, df_train_, df_test_)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	
 	return df_train_, df_test_
 
@@ -176,29 +206,41 @@ def freq_cat_values_count(df: pd.DataFrame, col_name: str, freq_threshold: int) 
 	
 
 def encode_product_id_single_df(df: pd.DataFrame, 
+								task:str,
 					  target_encoder: TargetEncoder = None, 
 					  frequent_products: set = None, 
-					  total_portion:float=0.85):
+					  total_portion:float=0.7):
+
+	if task not in ['regression', 'classification']:
+		raise NotImplementedError(f"expected either {['regression', 'classification']}. Found: {task}")
 
 	if frequent_products is None:
-		frequent_products, _ = freq_cat_values_portion(df, 'product_id', total_portion=total_portion)
+		frequent_products, min_product_freq = freq_cat_values_portion(df, 'product_id', total_portion=total_portion)
+		assert min_product_freq >= 20, f"Make sure to choose products that are frequent enough. Found min_product_fren: {min_product_freq}"
 
-	def _map_product_id(row):
-		if row['product_id'] not in frequent_products:
-			row['product_id'] = -1
-		return row
+	before_mapping_product_ids_unique = len(set(df['product_id'].tolist()).intersection(frequent_products))
 
-	df = df.apply(_map_product_id, axis=1)
+	# build a map 
+	product_id_map = {}
+	for fq in frequent_products:
+		product_id_map[fq] = fq
 
-	# convert to float since the target encoding is likely to return float data
-	df['product_id'] = df['product_id'].astype(float)
+	for fq in df['product_id'].values:
+		if fq not in frequent_products:
+			product_id_map[fq] = -1
+
+	df['product_id'] = df['product_id'].map(product_id_map).astype(float)
+
+	assert df['product_id'].nunique() == before_mapping_product_ids_unique + 1, "make sure the mapping is conducted correctly"
 
 	# prepare the data for the target encoder
 	X, y = df.loc[:, ['product_id']], df['y'] #(use 'y' and not ['y'] to pass a 1-dimensional array to the target encoder)
 
 	# use target_encoder to encode the 'product_id'
 	if target_encoder is None:
-		target_encoder = TargetEncoder(categories='auto', target_type='continuous', random_state=0, cv=3) # cv=3 just to reduce the computation overhead
+		target_encoder = TargetEncoder(categories='auto', 
+								 target_type='continuous' if task == 'regression' else 'binary', # make sure to set the 'continuous' target_type, otherwise the target encoder assumes it is a classification problem... 
+								 random_state=0, cv=3) # cv=3 just to reduce the computational overhead
 		X = target_encoder.fit_transform(X, y)
 	else:
 		X = target_encoder.transform(X)
@@ -208,31 +250,52 @@ def encode_product_id_single_df(df: pd.DataFrame,
 
 	return df, target_encoder, frequent_products
 	
-def encode_product_id(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-	df_train_, target_encoder, frequent_products = encode_product_id_single_df(df_train)
+def encode_product_id(df_train: pd.DataFrame, df_test: pd.DataFrame, task: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+	df_train_, target_encoder, frequent_products = encode_product_id_single_df(df_train, task)
 	# make sure to pass the output of the first call (with train data) to the second function call (with test data)
-	df_test_, _, _ = encode_product_id_single_df(df_test, target_encoder=target_encoder, frequent_products=frequent_products)
+	df_test_, _, _ = encode_product_id_single_df(df_test, target_encoder=target_encoder, frequent_products=frequent_products, task=task)
 
-	sanity_check(df_train, df_test, df_train_, df_test_)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
 
 
-def encode_store_id_single_df(df: pd.DataFrame, 
-							  freq_threshold: int = None, 
-							  frequent_stores: set[int] = None) -> pd.DataFrame: 
-	# determine the frequent stores
-	if frequent_stores is None:
-		frequent_stores = freq_cat_values_count(df, 'store_id', freq_threshold=freq_threshold)
+def prepare_store_id_information(df_train: pd.DataFrame,
+							  freq_threshold: int = 100):
+	
+	df = df_train.copy()
+	# get the frequent stores	
+	frequent_stores = freq_cat_values_count(df_train, 'store_id', freq_threshold=freq_threshold)
+	# compute the y_deviation
+	df['y_deviation'] = df['y'] - df['planned_prep_time']
 
-	# filter orders from frequent stores 
+	# split the data into frequent and non-frequent stores data
 	freq_store_orders = df[df['store_id'].isin(frequent_stores)]
 	non_freq_store_orders = df[~df['store_id'].isin(frequent_stores)]
 
-	freq_store_orders.loc[:, ['y_deviation']] = freq_store_orders['y'] - freq_store_orders['planned_prep_time']
-	non_freq_store_orders.loc[:, ['y_deviation']] = non_freq_store_orders['y'] - non_freq_store_orders['planned_prep_time']
+	# build the aggregated statistics for frequent stores
+	freq_store_orders_agg = pd.pivot_table(freq_store_orders, 
+											index=['store_id'], 
+											values='y_deviation', 
+											aggfunc=['mean', 'std'])
 
-	# compute the mean and standard deviation of for the non-freq store orders
-	nfso_mean, nsfo_std = np.mean(non_freq_store_orders['y_deviation']).item(), np.std(non_freq_store_orders['y_deviation']).item()
+	freq_store_orders_agg.columns = freq_store_orders_agg.columns.droplevel(1)
+	# rename the columns
+	freq_store_orders_agg.rename(columns={"mean": "y_deviation_mean", "std": "y_deviation_std"}, inplace=True)
+
+	# build a simple mean and std estimation of the deviation for non-frequent stores
+	nfso_mean, nfso_std = np.mean(non_freq_store_orders['y_deviation']).item(), np.std(non_freq_store_orders['y_deviation']).item()
+
+	return frequent_stores, freq_store_orders_agg, nfso_mean, nfso_std
+
+def encode_store_id_single_df_regression(df: pd.DataFrame, 
+							  frequent_stores: set[int],
+							  freq_store_orders_agg: pd.DataFrame,
+							  nfso_mean: float,
+							  nsfo_std: float) -> pd.DataFrame: 
+
+	# split the data into frequent and non frequent
+	freq_store_orders = df[df['store_id'].isin(frequent_stores)]
+	non_freq_store_orders = df[~df['store_id'].isin(frequent_stores)]
 
 	# save the mean deviation, and the u +- sigma and u +-2 * sigma 
 	non_freq_store_orders.loc[:, ['y_deviation_mean']] = nfso_mean
@@ -243,17 +306,6 @@ def encode_store_id_single_df(df: pd.DataFrame,
 	non_freq_store_orders.loc[:, ['y_deviation_l']] = nfso_mean - nsfo_std
 	non_freq_store_orders.loc[:, ['y_deviation_l2']] = nfso_mean - 2 *  nsfo_std
 
-	non_freq_store_orders.drop(columns=['y_deviation'], inplace=True)
-
-	# as for frequent stores, we have enough samples to use statistics aggregated by store id 
-	freq_store_orders_agg = pd.pivot_table(freq_store_orders, 
-											index=['store_id'], 
-											values='y_deviation', 
-											aggfunc=['mean', 'std'])
-
-	freq_store_orders_agg.columns = freq_store_orders_agg.columns.droplevel(1)
-	# rename the columns
-	freq_store_orders_agg.rename(columns={"mean": "y_deviation_mean", "std": "y_deviation_std"}, inplace=True)
 	# merge to associated each store with its statistics
 	freq_store_orders = pd.merge(freq_store_orders, 
 							   freq_store_orders_agg, 
@@ -267,18 +319,81 @@ def encode_store_id_single_df(df: pd.DataFrame,
 	freq_store_orders.loc[:, ['y_deviation_l2']] = freq_store_orders['y_deviation_mean'] - 2 * freq_store_orders['y_deviation_std'] 
 
 	# remove the 'y_deviation_std' and 'y_deviation' columns
-	freq_store_orders.drop(columns=['y_deviation_std', 'y_deviation'], inplace=True)
+	freq_store_orders.drop(columns=['y_deviation_std'], inplace=True)
 
 	# concatenate both dataframes: vertically
 	final_orders_df = pd.concat([freq_store_orders, non_freq_store_orders], axis=0, ignore_index=False).sort_index()
-	return final_orders_df, frequent_stores
+	
+	# make sure to remove the 'store_id' at the end
+	final_orders_df.drop(columns=['store_id'], inplace=True)
 
-def encode_store_id(df_train: pd.DataFrame, df_test: pd.DataFrame, freq_threshold:int=100) -> Tuple[pd.DataFrame, pd.DataFrame]:
-	df_train_, frequent_stores = encode_store_id_single_df(df_train, freq_threshold=freq_threshold)
+	return final_orders_df
+
+def encode_store_id_regression(df_train: pd.DataFrame, df_test: pd.DataFrame, freq_threshold:int=100) -> Tuple[pd.DataFrame, pd.DataFrame]:
+	frequent_stores, freq_store_orders_agg, nfso_mean, nfso_std = prepare_store_id_information(df_train, freq_threshold=freq_threshold)	
+
+	df_train_ = encode_store_id_single_df_regression(df_train, 
+									   frequent_stores=frequent_stores, 
+									   freq_store_orders_agg=freq_store_orders_agg,
+									   nfso_mean=nfso_mean,
+									   nsfo_std=nfso_std)
+
+	df_test_ = encode_store_id_single_df_regression(df_test, 
+									   frequent_stores=frequent_stores, 
+									   freq_store_orders_agg=freq_store_orders_agg,
+									   nfso_mean=nfso_mean,
+									   nsfo_std=nfso_std)
+
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
+	return df_train_, df_test_
+
+
+def encode_store_id_single_df_classification(df: pd.DataFrame, 
+											 freq_threshold:int=100, 
+											 frequent_stores: List[int]=None,
+											 target_encoder:TargetEncoder=None):
+	if frequent_stores is None:
+		frequent_stores = freq_cat_values_count(df, 'store_id', freq_threshold=freq_threshold)
+
+	before_mapping_product_ids_unique = len(set(df['store_id'].tolist()).intersection(frequent_stores))
+
+	# build a map 
+	product_id_map = {}
+	for fq in frequent_stores:
+		product_id_map[fq] = fq
+
+	for fq in df['store_id'].values:
+		if fq not in frequent_stores:
+			product_id_map[fq] = -1
+
+	df['store_id'] = df['store_id'].map(product_id_map).astype(float)
+
+	assert (df['store_id'].nunique() - before_mapping_product_ids_unique) in [0 , 1],  "make sure the mapping is conducted correctly"
+
+	# prepare the data for the target encoder
+	X, y = df.loc[:, ['store_id']], df['y'] #(use 'y' and not ['y'] to pass a 1-dimensional array to the target encoder)
+
+	# use target_encoder to encode the 'product_id'
+	if target_encoder is None:
+		target_encoder = TargetEncoder(categories='auto', 
+								 target_type='binary', # make sure to set the 'continuous' target_type, otherwise the target encoder assumes it is a classification problem... 
+								 random_state=0, cv=3) # cv=3 just to reduce the computational overhead
+		X = target_encoder.fit_transform(X, y)
+	else:
+		X = target_encoder.transform(X)
+
+	# set these values in the dataframe
+	df.loc[:, ['store_id']] = X
+
+	return df, target_encoder, frequent_stores
+
+
+def encode_store_id_classification(df_train: pd.DataFrame, df_test: pd.DataFrame, freq_threshold:int=100):
+	df_train_, target_encoder, frequent_stores = encode_store_id_single_df_classification(df_train, freq_threshold=freq_threshold)
 	# make sure to pass the output of the first call (with train data) to the second function call (with test data)
-	df_test_, _,= encode_store_id_single_df(df_test, frequent_stores=frequent_stores)
+	df_test_, _, _ = encode_store_id_single_df_classification(df_test, target_encoder=target_encoder, frequent_stores=frequent_stores)
 
-	sanity_check(df_train, df_test, df_train_, df_test_)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
 
 
@@ -290,24 +405,9 @@ def extract_time_features_single_df(df: pd.DataFrame) -> pd.DataFrame:
 
 def extract_time_features(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	df_train_, df_test_ = extract_time_features_single_df(df_train), extract_time_features_single_df(df_test)
-	sanity_check(df_train, df_test, df_train_, df_test_)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
 
-
-def impute_price_with_median_single_df(df: pd.DataFrame, median_imputer: SimpleImputer = None) -> Tuple[pd.DataFrame, SimpleImputer]:
-	if median_imputer is None:
-		median_imputer = SimpleImputer(strategy='median')
-		df.loc[:, ['price']] = median_imputer.fit_transform(df.loc[:, ['price']])
-	else:
-		df.loc[:, ['price']] = median_imputer.transform(df.loc[:, ['price']])
-
-	return df, median_imputer
-	
-def impute_price_with_median(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-	df_train_, imputer = impute_price_with_median_single_df(df_train)
-	df_test_, _ = impute_price_with_median_single_df(df_test, imputer)
-	sanity_check(df_train, df_test, df_train_, df_test_)
-	return df_train_, df_test_
 
 
 def scale_num_features_single_df(df: pd.DataFrame, scaler: Union[StandardScaler, RobustScaler], num_features: List[str] = None):
@@ -337,11 +437,11 @@ def scale_num_features_single_df(df: pd.DataFrame, scaler: Union[StandardScaler,
 def scale_num_features(df_train: pd.DataFrame, df_test: pd.DataFrame, num_features: List[str]=None) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	df_train_, scaler = scale_num_features_single_df(df_train, num_features)
 	df_test_, _ = scale_num_features_single_df(df_test, scaler, num_features)
-	sanity_check(df_train, df_test, df_train_, df_test_)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
 
 
-def process_data(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataFrame, pd.DataFrame]:
+def process_data_regression(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataFrame, pd.DataFrame]:
 	# detect outliers in the labels
 	eda.iqr_outliers(df_train, 'y', add_column=True)
 	# remove them
@@ -349,14 +449,17 @@ def process_data(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataF
 	df_train.drop(columns=['is_outlier'], inplace=True)
 
 	df_train, df_test = impute_prices(df_train, df_test)
-	df_train, df_test = impute_profit(df_train, df_test)
-
-	# encode product and store id
-	df_train, df_test = encode_product_id(df_train, df_test)
-	df_train, df_test = encode_store_id(df_train, df_test)
 
 	# impute the missing price samples with median
 	df_train, df_test = impute_price_with_median(df_train, df_test)
+
+	# there should be non missing values from now on 
+	df_train, df_test = impute_profit(df_train, df_test)
+
+	# encode product and store id
+	df_train, df_test = encode_product_id(df_train, df_test, task='regression')
+	df_train, df_test = encode_store_id_regression(df_train, df_test)
+
 	
 	# extract time features
 	df_train, df_test = extract_time_features(df_train, df_test)
@@ -370,6 +473,38 @@ def process_data(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataF
 
 	return df_train, df_test
 
+# create a similar processing function for classification
+def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataFrame, pd.DataFrame]:
+	# assume the data is balanced for the moment
+
+	# the first few steps 
+	df_train, df_test = impute_prices(df_train, df_test)
+
+	# impute the missing price samples with median
+	df_train, df_test = impute_price_with_median(df_train, df_test)
+
+	# there should be non missing values from now on 
+	df_train, df_test = impute_profit(df_train, df_test)
+
+	# the only difference is with product_id and store_id
+	
+	df_train, df_test = encode_product_id(df_train, df_test, task='classification')
+	df_train, df_test = encode_store_id_classification(df_train, df_test, freq_threshold=100)
+
+	# extract time features
+	df_train, df_test = extract_time_features(df_train, df_test)
+
+	# remove status id and order_id
+	df_train.drop(columns=['order_id', 'status_id'], inplace=True)
+	df_test.drop(columns=['order_id', 'status_id'], inplace=True)
+
+	# scale numerical features
+	df_train, df_test = scale_num_features(df_train, df_test)	
+
+
+
+	pass
+
 
 if __name__ == '__main__':
 	import data_preparation as dpre
@@ -379,11 +514,21 @@ if __name__ == '__main__':
 			df_save_file, 
 			overwrite=False # no need to execute the same lengthy query if the .csv file already exists...
 			)
-	all_data = dpre.prepare_all_data(df)
+	all_data = dpre.prepare_all_data_classification(df)
 
-	df_train, df_test = dpre.df_split(all_data, splits=(0.9, 0.1))
+	# df_train, df_test = dpre.df_split(all_data, splits=(0.9, 0.1))
+	# # everything seems to checkout !!!
+	# len(df_train), len(df_test), round(len(df_train) / len(df_test), 4) 
+
+	# df_train, df_test = process_data_regression(df_train, df_test)
+	print(all_data.head())
+
+	# split the data
+	df_train, df_test = dpre.df_split_classification(all_data, splits=(0.9, 0.1))
 	# everything seems to checkout !!!
-	len(df_train), len(df_test), round(len(df_train) / len(df_test), 4) 
+	print(len(df_train), len(df_test), round(len(df_train) / len(df_test), 4))
 
-	df_train, df_test = process_data(df_train, df_test)
+	df_train = df_train.drop(columns='y').rename(columns={"y_cls": "y"})
+	df_test = df_test.drop(columns='y').rename(columns={"y_cls": "y"})
 
+	process_data_classification(df_train, df_test)
