@@ -6,7 +6,7 @@ import os
 import pandas as pd, numpy as np, sqlite3 as sq
 
 from typing import Union, List, Tuple
-from sklearn.preprocessing import TargetEncoder, StandardScaler, RobustScaler
+from sklearn.preprocessing import TargetEncoder, StandardScaler, RobustScaler, OneHotEncoder, PolynomialFeatures
 from sklearn.impute import SimpleImputer
 from pathlib import Path
 
@@ -91,6 +91,38 @@ def samples_with_missing_data(df: pd.DataFrame,
 	return df.loc[selection_mask, :]
 
 
+def freq_cat_values_portion(df: pd.DataFrame, col_name: str, total_portion: float = 0.85) -> Tuple[Union[List, pd.Series], int]:
+	if col_name not in df.columns:
+		raise ValueError(f"the col_name arg must be a column name of the dataframe")
+	
+	counts = df.loc[:, col_name].value_counts(ascending=False)
+
+	total_samples = len(df)
+	freq_samples = set() 
+	current_total = 0
+	
+	for item, item_freq in counts.items():
+
+		if current_total / total_samples >= total_portion:
+			break
+
+		current_total += item_freq
+		freq_samples.add(item)		
+
+	# return the set of "frequent" values and the minimum frequency considered
+	return freq_samples, item_freq
+
+
+def freq_cat_values_count(df: pd.DataFrame, col_name: str, freq_threshold: int) -> Tuple[set, int]:
+	if col_name not in df.columns:
+		raise ValueError(f"the col_name arg must be a column name of the dataframe")
+	
+	# count the occurrence of each value in the given column
+	counts = df.loc[:, col_name].value_counts(ascending=False)
+	return set(counts[counts >= freq_threshold].index.tolist())
+
+
+
 def aggregate_prices_by_prod(df: pd.DataFrame) -> Tuple[pd.DataFrame,  ]:
 	price_agg_by_product_id = pd.pivot_table(df, values=['price'], index='product_id', aggfunc=['min', 'median', 'mean', 'count', lambda x: x.isna().sum()])
 	# keep pnly the mean price
@@ -173,37 +205,6 @@ def impute_profit(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Dat
 	
 	return df_train_, df_test_
 
-
-def freq_cat_values_portion(df: pd.DataFrame, col_name: str, total_portion: float = 0.85) -> Tuple[Union[List, pd.Series], int]:
-	if col_name not in df.columns:
-		raise ValueError(f"the col_name arg must be a column name of the dataframe")
-	
-	counts = df.loc[:, col_name].value_counts(ascending=False)
-
-	total_samples = len(df)
-	freq_samples = set() 
-	current_total = 0
-	
-	for item, item_freq in counts.items():
-
-		if current_total / total_samples >= total_portion:
-			break
-
-		current_total += item_freq
-		freq_samples.add(item)		
-
-	# return the set of "frequent" values and the minimum frequency considered
-	return freq_samples, item_freq
-
-
-def freq_cat_values_count(df: pd.DataFrame, col_name: str, freq_threshold: int) -> Tuple[set, int]:
-	if col_name not in df.columns:
-		raise ValueError(f"the col_name arg must be a column name of the dataframe")
-	
-	# count the occurrence of each value in the given column
-	counts = df.loc[:, col_name].value_counts(ascending=False)
-	return set(counts[counts >= freq_threshold].index.tolist())
-	
 
 def encode_product_id_single_df(df: pd.DataFrame, 
 								task:str,
@@ -387,7 +388,6 @@ def encode_store_id_single_df_classification(df: pd.DataFrame,
 
 	return df, target_encoder, frequent_stores
 
-
 def encode_store_id_classification(df_train: pd.DataFrame, df_test: pd.DataFrame, freq_threshold:int=100):
 	df_train_, target_encoder, frequent_stores = encode_store_id_single_df_classification(df_train, freq_threshold=freq_threshold)
 	# make sure to pass the output of the first call (with train data) to the second function call (with test data)
@@ -457,6 +457,27 @@ def scale_num_features(df_train: pd.DataFrame, df_test: pd.DataFrame, num_featur
 	return df_train_, df_test_
 
 
+def encode_region_ids(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+	ohe = OneHotEncoder(sparse_output=False)
+	
+	# train
+	train_region_id_ohe = ohe.fit_transform(df_train[['region_id']])
+	train_region_id_ohe = pd.DataFrame(data=np.asarray(train_region_id_ohe), index=df_train.index, columns=ohe.get_feature_names_out())
+	df_train_ = pd.concat([df_train, train_region_id_ohe], axis=1) # concatenate horizontally
+
+	# test
+	test_region_id_ohe = ohe.transform(df_test[['region_id']])
+	test_region_id_ohe = pd.DataFrame(test_region_id_ohe, index=df_test.index, columns=ohe.get_feature_names_out())
+	df_test_ = pd.concat([df_test, test_region_id_ohe], axis=1) # concatenate horizontally
+
+	# drop region_id
+	df_train_.drop(columns=['region_id'], inplace=True)
+	df_test_.drop(columns=['region_id'], inplace=True)
+
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
+
+	return df_train_, df_test_
+
 def group_orders_single_df(df: pd.DataFrame, product_freqs: pd.DataFrame):	
 	most_freq_prod_by_order = pd.pivot_table(df, index='order_id', 
 								values='product_id', 
@@ -489,7 +510,35 @@ def group_orders(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Data
 	return df_train_, df_test_
 
 
-def process_data_regression(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataFrame, pd.DataFrame]:
+def add_poly_feats(df_train: pd.DataFrame, 
+				   df_test: pd.DataFrame, 
+				   degree:int=3,
+				   num_feats:List[float]=None) -> Tuple[pd.DataFrame, pd.DataFrame]:
+
+	if num_feats is None:
+		num_feats = ['product_id', 'planned_prep_time', 'delivery_distance', 'profit', 'price']
+
+	poly_feats = PolynomialFeatures(degree=(2, degree), interaction_only=False)
+
+	num_feats_poly = poly_feats.fit_transform(df_train.loc[:, num_feats])
+	train_num_feats_poly = pd.DataFrame(num_feats_poly, index=df_train.index, columns=poly_feats.get_feature_names_out())
+	df_train_ = pd.concat([df_train, train_num_feats_poly], axis=1)
+
+
+	num_feats_poly = poly_feats.transform(df_test.loc[:, num_feats])
+	test_num_feats_poly = pd.DataFrame(num_feats_poly, index=df_test.index, columns=poly_feats.get_feature_names_out())
+	df_test_ = pd.concat([df_test , test_num_feats_poly], axis=1)
+
+
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
+
+	return df_train_, df_test_
+
+
+
+def process_data_regression(df_train: pd.DataFrame, 
+							df_test: pd.DataFrame,
+							poly_feats:bool=False)-> Tuple[pd.DataFrame, pd.DataFrame]:
 	# detect outliers in the labels
 	eda.iqr_outliers(df_train, 'y', add_column=True)
 	# remove them
@@ -516,8 +565,10 @@ def process_data_regression(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tup
 	# extract time features
 	df_train, df_test = extract_time_features(df_train, df_test)
 
-
 	df_train, df_test = num_features_outliers(df_train, df_test)	
+
+	# encoding region id using one hot encoding
+	df_train, df_test = encode_region_ids(df_train, df_test)
 
 	# # group records by order_id
 	# df_train, df_test = group_orders(df_train, df_test)
@@ -528,6 +579,10 @@ def process_data_regression(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tup
 
 	# scale numerical features
 	df_train, df_test = scale_num_features(df_train, df_test)	
+
+	# add polynomaial features
+	if poly_feats: 
+		df_train, df_test = add_poly_feats(df_train, df_test)
 
 	return df_train, df_test
 
@@ -600,22 +655,23 @@ if __name__ == '__main__':
 	# # extract time features
 	# df_train, df_test = extract_time_features(df_train, df_test)
 
-	y_train = df_train.pop('y')
-	y_test = df_test.pop('y')
 
-	p_train, p_test = os.path.join(DATA_FOLDER, 'regression', 'train_v2.csv'), os.path.join(DATA_FOLDER, 'regression', 'test_v2.csv')
+	p_train, p_test = os.path.join(DATA_FOLDER, 'regression', 'train_v3.csv'), os.path.join(DATA_FOLDER, 'regression', 'test_v3.csv')
 
 	df_train.to_csv(p_train, index=False)
 	df_test.to_csv(p_test, index=False)
-	y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v2.csv'), index=False)
-	y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v2.csv'),index=False)
+
+	y_train = df_train.pop('y')
+	y_test = df_test.pop('y')
+
+	y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.csv'), index=False)
+	y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.csv'),index=False)
 
 
-	# df_train, df_test = pd.read_csv(p_train), pd.read_csv(p_test)
-
-	# df_train, df_test = group_orders(df_train, df_test)
-
-
+	# df_train.to_csv(p_train, index=False)
+	# df_test.to_csv(p_test, index=False)
+	# y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.csv'), index=False)
+	# y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.csv'),index=False)
 
 
 	# df_train, df_test = pd.read_csv(p_train), pd.read_csv(p_test)

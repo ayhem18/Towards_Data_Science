@@ -1,6 +1,7 @@
-import torch, os, pickle
+import torch, os, pickle, random
 import pandas as pd, numpy as np 
 
+from functools import partial
 from tqdm import tqdm
 from typing import List, Iterator, Union, Optional, Tuple
 from pathlib import Path
@@ -8,7 +9,7 @@ from pathlib import Path
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-# from torch.optim.sgd import SGD 
+from torch.optim.lr_scheduler import LinearLR
 
 from models import evaluate_reg_model
 
@@ -21,6 +22,32 @@ while 'data' not in os.listdir(current):
 
 DATA_FOLDER = os.path.join(current, 'data')
 
+
+
+def seed_everything(seed: int = 69):
+    # let's set reproducility
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed=seed)
+    torch.use_deterministic_algorithms(True, warn_only=True) # certain layers have no deterministic implementation... we'll need to compromise on this one...
+    torch.backends.cudnn.benchmark = False 
+
+    # the final step to ensure reproducibility is to set the environment variable: # CUBLAS_WORKSPACE_CONFIG=:16:8
+    import warnings
+    # first check if the CUBLAS_WORSKPACE_CONFIG variable is set or not
+    env_var = os.getenv('CUBLAS_WORKSPACE_CONFIG')
+    if env_var is None:
+        # the env variable was not set previously
+        os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8' # this is not the only viable value. I cannot remember the other value at the time of writing this code.
+    else:
+        if env_var not in [':16:8']:
+            warnings.warn(message=f"the env variable 'CUBLAS_WORKSPACE_CONFIG' is set to the value {env_var}. setting it to: ':16:8' ")
+            os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'        
+
+    
+def set_worker_seed(_, seed: int = 69):
+    np.random.seed(seed=seed)
+    random.seed(seed)
 
 class Network(torch.nn.Module): 
     def __init__(self, in_features: int, hidden_units: List[int], dropout:float):
@@ -134,18 +161,23 @@ def train_ann(X_train: pd.DataFrame,
               save_model_path: Optional[Union[str, Path]]=None
               ):
 
+    seed_everything(seed=0)
+
     net = Network(in_features=X_train.shape[1], 
                   hidden_units=ann_hidden_units, 
                   dropout=0)
 
     # dataset
     train_ds = DataFrameDs(X_train, y_train)
-    train_dl = DataLoader(train_ds, batch_size=512, shuffle=True, drop_last=True)
+    train_dl = DataLoader(train_ds, batch_size=1024, shuffle=True, drop_last=True, worker_init_fn=partial(set_worker_seed, seed=0))
 
+    test_ds = DataFrameDs(X_test, y_test)
+    test_dl = DataLoader(test_ds, batch_size=1024, shuffle=False, drop_last=False, worker_init_fn=partial(set_worker_seed, seed=0))
 
     # optimizer = SGD(net.parameters(), lr=0.001, momentum=0.99)
     optimizer = Adam(net.parameters(), lr=0.01)
 
+    lr_scheduler = LinearLR(optimizer=optimizer, start_factor=1, end_factor=0.01, total_iters=num_epochs) 
     loss = torch.nn.MSELoss()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -157,7 +189,7 @@ def train_ann(X_train: pd.DataFrame,
     for i in tqdm(range(num_epochs)):
         epoch_loss = 0
 
-        for x, y in tqdm(train_dl, desc=f'epoch: {i + 1} iterating through dataset'):
+        for x, y in tqdm(train_dl, desc=f'epoch: {i + 1} iterating through train dataset'):
             x, y = x.to(device), y.to(device) 
             optimizer.zero_grad()
             # forward pass
@@ -173,9 +205,28 @@ def train_ann(X_train: pd.DataFrame,
             # backward pass
             optimizer.step()
 
+        lr_scheduler.step() 
+
         epoch_loss /= len(train_dl)
         print(f"epoch: {i + 1}: train loss: {epoch_loss}")
         train_metrics[f"train_loss_epoch_ {i + 1}"] = epoch_loss
+
+        val_epoch_loss = 0
+
+        with torch.no_grad():
+            for x, y in tqdm(test_dl, desc=f'epoch: {i + 1} iterating through val dataset'):
+                x, y = x.to(device), y.to(device) 
+                # forward pass
+                y_model = net.forward(x).squeeze()
+            
+                loss_obj = loss.forward(y_model, y)
+            
+                val_epoch_loss += loss_obj.item()
+
+        val_epoch_loss /= len(test_dl)
+        print(f"epoch: {i + 1}: val loss: {val_epoch_loss}")
+        train_metrics[f"val_loss_epoch_ {i + 1}"] = val_epoch_loss
+
 
     # predict on the train dataset
     y_train_pred = predict(net, X_train, y_train)
@@ -205,18 +256,18 @@ def train_ann(X_train: pd.DataFrame,
 
 
 if __name__ == '__main__':
-    df_train = pd.read_csv(os.path.join(DATA_FOLDER, 'train.csv'))
-    y_train = pd.read_csv(os.path.join(DATA_FOLDER, 'y_train.csv'))
+    df_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'train_v3.csv'))
+    y_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.csv'))
 
-    df_test = pd.read_csv(os.path.join(DATA_FOLDER, 'test.csv'))
-    y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'y_test.csv'))
+    df_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'test_v3.csv'))
+    y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.csv'))
 
     net, train_metrics, test_metrics = train_ann(X_train=df_train, 
                                                  y_train=y_train, 
                                                  X_test=df_test, 
                                                  y_test=y_test,
                                                  ann_hidden_units=[512, 256, 32], 
-                                                 num_epochs=3)
+                                                 num_epochs=25)
 
     print(train_metrics)
     print(test_metrics)
