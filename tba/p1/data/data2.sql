@@ -12,7 +12,7 @@ SELECT COUNT(order_id) FROM order_props_value where ORDER_PROPS_ID = 77;
 -- we can except around 450k order_ids with valid start and finish prep time
 select count(order_id) as "c", count(DISTINCT(order_id)) as "dc"
 from order_props_value
-where ORDER_PROPS_ID = 97; 
+where ORDER_PROPS_ID = 97 
 and not value is Null;
 
 select count(order_id) as "c", count(DISTINCT(order_id)) as "dc"

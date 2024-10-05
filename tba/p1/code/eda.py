@@ -32,7 +32,7 @@ def iqr_outliers(df: pd.DataFrame,
     mask = df[col].between(min_val, max_val)
 
     if add_column:
-        df['is_outlier'] = ~mask
+        df.loc[:, ['is_outlier']] = ~mask
 
     return mask
 

@@ -501,9 +501,11 @@ def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame)->
 	# scale numerical features
 	df_train, df_test = scale_num_features(df_train, df_test)	
 
+	return df_train, df_test
 
 
-	pass
+# def transform_2_normal_dist()
+
 
 
 if __name__ == '__main__':
@@ -514,21 +516,28 @@ if __name__ == '__main__':
 			df_save_file, 
 			overwrite=False # no need to execute the same lengthy query if the .csv file already exists...
 			)
-	all_data = dpre.prepare_all_data_classification(df)
+	all_data = dpre.prepare_all_data_regression(df)
 
-	# df_train, df_test = dpre.df_split(all_data, splits=(0.9, 0.1))
-	# # everything seems to checkout !!!
-	# len(df_train), len(df_test), round(len(df_train) / len(df_test), 4) 
+	df_train, df_test = dpre.df_split_regression(all_data, splits=(0.9, 0.1))
+	# everything seems to checkout !!!
+	len(df_train), len(df_test), round(len(df_train) / len(df_test), 4) 
+
+	df_train, df_test = process_data_regression(df_train, df_test)
+	y_train = df_train.pop('y')
+	y_test = df_test.pop('y')
+
+	df_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'train_v1.csv'))
+	df_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'test_v1.csv'))
+
+	y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v1.csv'))
+	y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v1.csv'))
 
 	# df_train, df_test = process_data_regression(df_train, df_test)
-	print(all_data.head())
 
-	# split the data
-	df_train, df_test = dpre.df_split_classification(all_data, splits=(0.9, 0.1))
-	# everything seems to checkout !!!
-	print(len(df_train), len(df_test), round(len(df_train) / len(df_test), 4))
+	# # split the data
+	# df_train, df_test = dpre.df_split_classification(all_data, splits=(0.9, 0.1))
 
-	df_train = df_train.drop(columns='y').rename(columns={"y_cls": "y"})
-	df_test = df_test.drop(columns='y').rename(columns={"y_cls": "y"})
+	# df_train = df_train.drop(columns='y').rename(columns={"y_cls": "y"})
+	# df_test = df_test.drop(columns='y').rename(columns={"y_cls": "y"})
 
-	process_data_classification(df_train, df_test)
+	# df_train, df_test = process_data_classification(df_train, df_test)
