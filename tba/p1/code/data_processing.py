@@ -231,7 +231,7 @@ def encode_product_id_single_df(df: pd.DataFrame,
 
 	df['product_id'] = df['product_id'].map(product_id_map).astype(float)
 
-	assert df['product_id'].nunique() == before_mapping_product_ids_unique + 1, "make sure the mapping is conducted correctly"
+	assert (df['product_id'].nunique() - before_mapping_product_ids_unique) in [1, 0], "make sure the mapping is conducted correctly"
 
 	# prepare the data for the target encoder
 	X, y = df.loc[:, ['product_id']], df['y'] #(use 'y' and not ['y'] to pass a 1-dimensional array to the target encoder)
@@ -246,7 +246,7 @@ def encode_product_id_single_df(df: pd.DataFrame,
 		X = target_encoder.transform(X)
 
 	# set these values in the dataframe
-	df.loc[:, ['product_id']] = X
+	df.loc[:, ['product_id_encoded']] = X
 
 	return df, target_encoder, frequent_products
 	
@@ -398,8 +398,8 @@ def encode_store_id_classification(df_train: pd.DataFrame, df_test: pd.DataFrame
 
 
 def extract_time_features_single_df(df: pd.DataFrame) -> pd.DataFrame:
-    df['order_hour'] = df['start_prep_date'].dt.hour
-    df['order_day'] = df['start_prep_date'].dt.day_name().map({'Monday':0, 'Tuesday':1, 'Wednesday':2, 'Thursday':3, 'Friday':4, 'Saturday':5, 'Sunday':6})
+    df.loc[:, ['order_hour']] = df['start_prep_date'].dt.hour
+    df.loc[: ,['order_day']] = df['start_prep_date'].dt.day_name().map({'Monday':0, 'Tuesday':1, 'Wednesday':2, 'Thursday':3, 'Friday':4, 'Saturday':5, 'Sunday':6})
     df.drop(columns='start_prep_date', inplace=True)
     return df
 
@@ -408,6 +408,22 @@ def extract_time_features(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tupl
 	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
 
+
+def num_features_outliers(df_train: pd.DataFrame, df_test: pd.DataFrame, ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+
+	for f in ['profit', 'price']:
+		min_val, max_val = eda.compute_iqr_limiters(df_train[f])
+		df_train[f'{f}_is_outlier'] = (~df_train[f].between(min_val, max_val)).astype(int)
+		df_test[f'{f}_is_outlier'] = (~df_test[f].between(min_val, max_val)).astype(int)
+
+	# clip the values for 'delivery_distance'
+	min_dd, max_dd = eda.compute_iqr_limiters(df_train['delivery_distance'])
+
+	# clip the values of delivery distance as the outliers do not have a significant label distribution
+	df_train.loc[:, ['delivery_distance']] = df_train['delivery_distance'].clip(lower=min_dd, upper=max_dd)
+	df_test.loc[:, ['delivery_distance']] = df_test['delivery_distance'].clip(lower=min_dd, upper=max_dd)
+
+	return df_train, df_test
 
 
 def scale_num_features_single_df(df: pd.DataFrame, scaler: Union[StandardScaler, RobustScaler], num_features: List[str] = None):
@@ -441,12 +457,49 @@ def scale_num_features(df_train: pd.DataFrame, df_test: pd.DataFrame, num_featur
 	return df_train_, df_test_
 
 
+def group_orders_single_df(df: pd.DataFrame, product_freqs: pd.DataFrame):	
+	most_freq_prod_by_order = pd.pivot_table(df, index='order_id', 
+								values='product_id', 
+								aggfunc=lambda x: max(x, # x in this case represents the list of products in the order_id 
+								 key=lambda p: product_freqs[p] if p in product_freqs.index else -1)
+								)	
+	most_freq_prod_by_order.rename(columns={most_freq_prod_by_order.columns[0]: "most_freq_product"}, inplace=True)
+	
+	total_price_by_order = pd.pivot_table(df, index='order_id', values='price', aggfunc='sum')		
+	total_price_by_order.rename(columns={total_price_by_order.columns[0]: "total_price"}, inplace=True)
+
+	df = pd.merge(df, most_freq_prod_by_order, left_on='order_id', right_index=True, )
+	df = pd.merge(df, total_price_by_order, left_on='order_id', right_index=True)
+
+	# keep only the record related to the most frequent product in each order
+	df = df[df['product_id'] == df['most_freq_product']]
+
+	# drop product_id, most_freq_product and price
+	return df.drop(columns=['product_id', 'most_freq_product', 'total_price'])
+
+def group_orders(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+	train_products_frequency = df_train['product_id'].value_counts(ascending=False)
+	df_train_ = group_orders_single_df(df_train, train_products_frequency)
+	df_test_ = group_orders_single_df(df_test, train_products_frequency)
+
+	assert df_train['order_id'].nunique() == df_train_['order_id'].nunique(), "no orders were lost"
+	assert df_test['order_id'].nunique() == df_test_['order_id'].nunique(), "no orders were lost"
+
+	# sanity_check(df_train, df_test, df_train_, df_test_, check_nans=False)
+	return df_train_, df_test_
+
+
 def process_data_regression(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataFrame, pd.DataFrame]:
 	# detect outliers in the labels
 	eda.iqr_outliers(df_train, 'y', add_column=True)
 	# remove them
-	df_train = df_train[df_train['is_outlier'] == False]
-	df_train.drop(columns=['is_outlier'], inplace=True)
+	df_train = df_train[df_train['y_is_outlier'] == False]
+	df_train.drop(columns=['y_is_outlier'], inplace=True)
+
+	df_train.drop(columns=['order_created_date'], inplace=True)
+	df_test.drop(columns=['order_created_date'], inplace=True)
+
+	# encode the region_id using one hot encoding
 
 	df_train, df_test = impute_prices(df_train, df_test)
 
@@ -460,9 +513,14 @@ def process_data_regression(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tup
 	df_train, df_test = encode_product_id(df_train, df_test, task='regression')
 	df_train, df_test = encode_store_id_regression(df_train, df_test)
 
-	
 	# extract time features
 	df_train, df_test = extract_time_features(df_train, df_test)
+
+
+	df_train, df_test = num_features_outliers(df_train, df_test)	
+
+	# # group records by order_id
+	# df_train, df_test = group_orders(df_train, df_test)
 
 	# remove status id and order_id
 	df_train.drop(columns=['order_id', 'status_id'], inplace=True)
@@ -504,9 +562,6 @@ def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame)->
 	return df_train, df_test
 
 
-# def transform_2_normal_dist()
-
-
 
 if __name__ == '__main__':
 	import data_preparation as dpre
@@ -523,14 +578,48 @@ if __name__ == '__main__':
 	len(df_train), len(df_test), round(len(df_train) / len(df_test), 4) 
 
 	df_train, df_test = process_data_regression(df_train, df_test)
+
+	# eda.iqr_outliers(df_train, 'y', add_column=True)
+	# # remove them
+	# df_train = df_train[df_train['is_outlier'] == False]
+	# df_train.drop(columns=['is_outlier'], inplace=True)
+
+	# df_train, df_test = impute_prices(df_train, df_test)
+
+	# # impute the missing price samples with median
+	# df_train, df_test = impute_price_with_median(df_train, df_test)
+
+	# # there should be non missing values from now on 
+	# df_train, df_test = impute_profit(df_train, df_test)
+
+	# # encode product and store id
+	# df_train, df_test = encode_product_id(df_train, df_test, task='regression')
+	# df_train, df_test = encode_store_id_regression(df_train, df_test)
+
+	
+	# # extract time features
+	# df_train, df_test = extract_time_features(df_train, df_test)
+
 	y_train = df_train.pop('y')
 	y_test = df_test.pop('y')
 
-	df_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'train_v1.csv'))
-	df_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'test_v1.csv'))
+	p_train, p_test = os.path.join(DATA_FOLDER, 'regression', 'train_v2.csv'), os.path.join(DATA_FOLDER, 'regression', 'test_v2.csv')
 
-	y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v1.csv'))
-	y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v1.csv'))
+	df_train.to_csv(p_train, index=False)
+	df_test.to_csv(p_test, index=False)
+	y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v2.csv'), index=False)
+	y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v2.csv'),index=False)
+
+
+	# df_train, df_test = pd.read_csv(p_train), pd.read_csv(p_test)
+
+	# df_train, df_test = group_orders(df_train, df_test)
+
+
+
+
+	# df_train, df_test = pd.read_csv(p_train), pd.read_csv(p_test)
+
 
 	# df_train, df_test = process_data_regression(df_train, df_test)
 

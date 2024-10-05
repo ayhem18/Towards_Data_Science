@@ -22,14 +22,16 @@ DATA_FOLDER = os.path.join(current, 'data')
 DATA_PREP_SQL_QUERY = """
 SELECT orders.order_id, 
 
+-- ordering the start and finish prep dates
 (CASE orders.start_prep_date <= orders.finish_prep_date WHEN 1 THEN orders.start_prep_date ELSE orders.finish_prep_date end) as "start_prep_date", 
 
 (CASE orders.finish_prep_date <= orders.start_prep_date WHEN 1 THEN orders.start_prep_date ELSE orders.finish_prep_date end) as "finish_prep_date",
 
--- orders.start_prep_date, orders.finish_prep_date, 
-
 orders.profit, 
 orders.delivery_distance, 
+orders.region_id,
+
+oh.DATE_CREATE as "order_created_date",
 
 oh.STATUS_ID, 
 oh.planned_prep_time, 
@@ -38,7 +40,7 @@ ob.store_id,
 ob.price
 
 FROM (
-	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance"
+	SELECT o1.order_id, o2.value as "start_prep_date", o1.value as "finish_prep_date", o3.value as "profit", o4.value as "delivery_distance", o5.value as "region_id"
 
 	from order_props_value as o1 
 
@@ -52,6 +54,9 @@ FROM (
 
 	JOIN order_props_value as o4
 	ON o4.ORDER_PROPS_ID = 65 AND O1.order_id = o4.order_id
+	
+	JOIN order_props_value as o5 
+	ON o5.ORDER_PROPS_ID = 11 AND o1.order_id = o5.order_id
 ) as orders
 
 JOIN order_history as oh
@@ -98,6 +103,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
 	# convert both 'dates' to datetime objects
 	df['finish_prep_date'] = pd.to_datetime(df['finish_prep_date'])
 	df['start_prep_date'] = pd.to_datetime(df['start_prep_date'])
+	df['order_created_date'] = pd.to_datetime(df['order_created_date'], format='mixed')
 
 	# calculate the actual preparation time: 'y'
 	df['y'] = (df['finish_prep_date'] - df['start_prep_date']).dt.total_seconds() // 60

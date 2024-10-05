@@ -32,9 +32,9 @@ def iqr_outliers(df: pd.DataFrame,
     mask = df[col].between(min_val, max_val)
 
     if add_column:
-        df.loc[:, ['is_outlier']] = ~mask
+        df.loc[:, [f'{column}_is_outlier']] = ~mask
 
-    return mask
+    return mask, min_val, max_val
 
 
 def encode_product_ids_1(df_train:pd.DataFrame):

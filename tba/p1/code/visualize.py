@@ -1,7 +1,7 @@
-import pandas as pd
+import pandas as pd, numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Optional
+from typing import Optional, List
 
 def visualize_discrete_values(df:pd.DataFrame, 
                               feat_col: str, 
@@ -10,8 +10,10 @@ def visualize_discrete_values(df:pd.DataFrame,
                               max_unique_vals: int = 10,
                               feat_name: str = None,
                               label_name: str = None,
+
                               axes: plt.axes = None,
-                              show: bool = True
+                              show: bool = True,
+                              values_as_xticks:bool=False
                               ):
     
     if feat_name is None:
@@ -38,7 +40,11 @@ def visualize_discrete_values(df:pd.DataFrame,
     # accroding to the documentation: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.boxplot.html
     # tick_labels corresponding to the labels associated with each inner boxplot
 
-    axes.boxplot(data, positions=values)
+
+    if values_as_xticks:
+        axes.boxplot(data)
+    else:
+        axes.boxplot(data, positions=values)
 
     axes.set_title(f"{label_name} distribution in terms of {n_most_freq} values in {feat_name}")
    
@@ -48,4 +54,16 @@ def visualize_discrete_values(df:pd.DataFrame,
     if show:
         plt.show()
 
+
+def visualize_continuous_distribution(x: np.ndarray | pd.Series | List, sequence_name: str):
+    fig = plt.figure(figsize=(14, 6)) 
+    fig.add_subplot(1, 2, 1) 
+
+    plt.hist(x, bins=100)
+    plt.title(f"Histogram of {sequence_name}")
+
+    fig.add_subplot(1, 2, 2) 
+    plt.boxplot(x)
+    plt.title(f"Box plot of {sequence_name}")
+    plt.show()
 
