@@ -52,9 +52,6 @@ ON o.order_id = e.order_id
 
 
 
-
-
-
 -- final query
 
 SELECT orders.order_id, 

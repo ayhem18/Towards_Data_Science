@@ -2,13 +2,12 @@ import os, pickle, re
 import pandas as pd, numpy as np
 
 from pathlib import Path
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, Callable
 from sklearn.base import BaseEstimator
-from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 
-from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
-from sklearn.preprocessing import RobustScaler, StandardScaler
+from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error, f1_score, accuracy_score, roc_auc_score
+
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -37,16 +36,38 @@ def evaluate_reg_model(
     if model is None and y_pred is None:
         raise TypeError(f"At least one of the arguments 'model', 'y_pred' must be passed")
 
-    x = x_test.values if isinstance(x_test, pd.DataFrame) else x_test
-    y = y_test.values if isinstance(y_test, pd.DataFrame) else y_test
-
     if model is not None:
-        y_pred = model.predict(x)
+        y_pred = model.predict(x_test)
 
     # calculate the mse, mae and r^2 scores
-    res = {"rmse": root_mean_squared_error(y, y_pred),
-            "mae": mean_absolute_error(y, y_pred),
-            "r2": r2_score(y, y_pred)}
+    res = {"rmse": root_mean_squared_error(y_test, y_pred),
+            "mae": mean_absolute_error(y_test, y_pred),
+            "r2": r2_score(y_test, y_pred)}
+
+    # round the values to '4' decimals
+    for k, v in res.items():
+        res[k] = round(v, 4)
+    
+    return res
+
+
+def evaluate_classification_model(
+                    x_test: pd.DataFrame | np.ndarray, 
+                    y_test: pd.DataFrame | np.ndarray,
+                    model: Optional[BaseEstimator]=None, 
+                    y_pred: Optional[pd.DataFrame | np.ndarray]=None) -> Dict[str, float]:
+    if model is None and y_pred is None:
+        raise TypeError(f"At least one of the arguments 'model', 'y_pred' must be passed")
+
+
+    if model is not None:
+        y_pred = model.predict(x_test)
+
+    # calculate the mse, mae and r^2 scores
+    res = {"accuracy": accuracy_score(y_test, y_pred),
+            "f1_score": f1_score(y_test, y_pred),
+            "auc": roc_auc_score(y_test, y_pred)
+            }
 
     # round the values to '4' decimals
     for k, v in res.items():
@@ -60,15 +81,13 @@ def pipeline(X_train: pd.DataFrame | np.ndarray,
             X_test: pd.DataFrame | np.ndarray,
             y_test: pd.DataFrame | np.ndarray,
             model:BaseEstimator,
-            save_model_path: Optional[Union[str, Path]]=None
+            task:str,
+            save_model_path: Optional[Union[str, Path]]=None,
             ):
 
-    # extract the numpy array from the passed arguments
-    X_train = X_train.values if isinstance(X_train, pd.DataFrame) else X_train
-    y_train = y_train.values if isinstance(y_train, pd.DataFrame) else y_train
+    if task not in ['regression', 'classification']:
+        raise NotImplementedError(f"The function expectes the task argument to be either 'regresion' or 'classification'. Found: {task}")
 
-    X_test = X_test.values if isinstance(X_test, pd.DataFrame) else X_test
-    y_test = y_test.values if isinstance(y_test, pd.DataFrame) else y_test
     
     # create a pipeline with a standard scaler and the model
     pip = make_pipeline(model)
@@ -79,7 +98,9 @@ def pipeline(X_train: pd.DataFrame | np.ndarray,
     # extract the training metrics
     model_name, _ = pip.steps[-1]
     
-    train_metrics = evaluate_reg_model(X_train, y_train, model=model)    
+    eval_funcion = evaluate_reg_model if task == 'regression' else evaluate_classification_model
+
+    train_metrics = eval_funcion(X_train, y_train, model=model)    
     
     items = list(train_metrics.items())
     for k, v in items:
@@ -87,7 +108,7 @@ def pipeline(X_train: pd.DataFrame | np.ndarray,
         del(train_metrics[k])
     
 
-    test_metrics = evaluate_reg_model(X_test, y_test, model=model)    
+    test_metrics = eval_funcion(X_test, y_test, model=model)    
     items = list(test_metrics.items())
     for k, v in items:
         test_metrics[f"test_{k}"] = v
@@ -96,7 +117,7 @@ def pipeline(X_train: pd.DataFrame | np.ndarray,
     # save everything
     # :the model
     if save_model_path is None:
-        save_dir = os.path.join(DATA_FOLDER, 'models', model_name)        
+        save_dir = os.path.join(DATA_FOLDER, 'models', task, model_name, )        
         os.makedirs(save_dir, exist_ok=True)
         save_model_path = os.path.join(save_dir, f'{model_name}.ob')
 
@@ -111,4 +132,27 @@ def pipeline(X_train: pd.DataFrame | np.ndarray,
     return model, train_metrics, test_metrics
 
 
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
+def tune(X_train: pd.DataFrame | np.ndarray, 
+        y_train: pd.DataFrame | np.ndarray,
+        model: BaseEstimator, 
+        param_grid: Dict,
+        score: str | Callable,
+        strategy: str
+        ) -> BaseEstimator:
+
+    if strategy == 'grid':
+        search = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=5, scoring=score)
+    else:
+        search = RandomizedSearchCV(estimator=model, 
+                                    param_distributions=param_grid, 
+                                    n_jobs=-1, 
+                                    cv=5, 
+                                    scoring=score, 
+                                    n_iter=10)
+
+    cv = search.fit(X_train, y_train)    
+
+    return cv.best_estimator_
+    

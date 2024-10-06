@@ -9,6 +9,7 @@ from pathlib import Path
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch.optim.sgd import SGD
 from torch.optim.lr_scheduler import LinearLR
 
 from models import evaluate_reg_model
@@ -158,6 +159,7 @@ def train_ann(X_train: pd.DataFrame,
               y_test: pd.DataFrame,
               ann_hidden_units: List[int],
               num_epochs: int,
+              version_number: int,
               save_model_path: Optional[Union[str, Path]]=None
               ):
 
@@ -174,7 +176,6 @@ def train_ann(X_train: pd.DataFrame,
     test_ds = DataFrameDs(X_test, y_test)
     test_dl = DataLoader(test_ds, batch_size=1024, shuffle=False, drop_last=False, worker_init_fn=partial(set_worker_seed, seed=0))
 
-    # optimizer = SGD(net.parameters(), lr=0.001, momentum=0.99)
     optimizer = Adam(net.parameters(), lr=0.01)
 
     lr_scheduler = LinearLR(optimizer=optimizer, start_factor=1, end_factor=0.01, total_iters=num_epochs) 
@@ -187,6 +188,8 @@ def train_ann(X_train: pd.DataFrame,
     train_metrics = {}
 
     for i in tqdm(range(num_epochs)):
+        # set to train mode
+        net.train()
         epoch_loss = 0
 
         for x, y in tqdm(train_dl, desc=f'epoch: {i + 1} iterating through train dataset'):
@@ -213,6 +216,8 @@ def train_ann(X_train: pd.DataFrame,
 
         val_epoch_loss = 0
 
+        # set to eval model
+        net.eval()
         with torch.no_grad():
             for x, y in tqdm(test_dl, desc=f'epoch: {i + 1} iterating through val dataset'):
                 x, y = x.to(device), y.to(device) 
@@ -238,7 +243,7 @@ def train_ann(X_train: pd.DataFrame,
 
     model_name = 'ann'
     if save_model_path is None:
-        save_dir = os.path.join(DATA_FOLDER, 'models', model_name)        
+        save_dir = os.path.join(DATA_FOLDER, 'models', model_name, f'v_{version_number}')        
         os.makedirs(save_dir, exist_ok=True)
         save_model_path = os.path.join(save_dir, f'{model_name}.pt')
 
@@ -256,18 +261,20 @@ def train_ann(X_train: pd.DataFrame,
 
 
 if __name__ == '__main__':
-    df_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'train_v3.csv'))
-    y_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.csv'))
+    df_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'train_v3.2.csv'))
+    y_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.2.csv'))
 
-    df_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'test_v3.csv'))
-    y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.csv'))
+    df_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'test_v3.2.csv'))
+    y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.2.csv'))
 
     net, train_metrics, test_metrics = train_ann(X_train=df_train, 
                                                  y_train=y_train, 
                                                  X_test=df_test, 
                                                  y_test=y_test,
                                                  ann_hidden_units=[512, 256, 32], 
-                                                 num_epochs=25)
+                                                 num_epochs=25,
+                                                 version_number=3.3)
 
     print(train_metrics)
     print(test_metrics)
+ 

@@ -202,21 +202,3 @@ def df_split_classification(df: pd.DataFrame, splits: Tuple[float, float]) -> Tu
 	return df1, df2
 
 
-
-if __name__ == '__main__':
-	# db_file = os.path.join(DATA_FOLDER, 'F24.ML.Assignment.One.data.db')
-	# df_save_file = os.path.join(DATA_FOLDER, 'data.csv')
-	# df = data_to_df(db_file, df_save_file)
-	# # samples_with_missing = samples_with_missing_data(df, columns=['finish_prep_date', 'start_prep_date', 'planned_prep_time'], missing_data_rel='or', objective='locate')
-	# # print(f"ratio: {len(samples_with_missing) / len(df)}") 
-	# df = samples_with_missing_data(df, columns=['finish_prep_date', 'start_prep_date', 'planned_prep_time'], missing_data_rel='or', objective='remove')
-	# df = prepare_labels(df)
-	# df_train, df_test = df_split(df, splits=(0.9, 0.1))
-
-	# # pd.pivot_table(df, values=['price'], index='product_id', aggfunc=['min', 'median', 'min'])
-	# product_price_train = pd.pivot_table(df_train, values=['price'], index='product_id', aggfunc=['min', 'median', 'mean'])
-
-	# # choose samples that have nan values for every aggregate function
-	# products_no_price_train = samples_with_missing_data(product_price_train, columns=[('mean', 'price')], missing_data_rel='and', objective='locate')
-	# products_no_price_train.head()
-	pass

@@ -5,25 +5,27 @@ This script contains a number of functions used to process data in general
 import os
 import pandas as pd, numpy as np, sqlite3 as sq
 
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 from sklearn.preprocessing import TargetEncoder, StandardScaler, RobustScaler, OneHotEncoder, PolynomialFeatures
 from sklearn.impute import SimpleImputer
 from pathlib import Path
 
+import data_preparation as dpre
 import eda
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-current = SCRIPT_DIR
-while 'data' not in os.listdir(current):
-    current = Path(current).parent
+# current = SCRIPT_DIR
+# while 'data' not in os.listdir(current):
+#     current = Path(current).parent
 
-DATA_FOLDER = os.path.join(current, 'data')
+DATA_FOLDER = os.path.join(SCRIPT_DIR, 'data')
 
 
 def sanity_check(df_train: pd.DataFrame, 
 				 df_test: pd.DataFrame, 
 				 df_train_: pd.DataFrame, 
 				 df_test_: pd.DataFrame, 
+				 check_index: bool = True,
 				 check_nans: bool=False):
 	# make sure the new operations did not remove any samples by mistake
 	assert len(df_train_) == len(df_train), f"Some train samples were removed. Before: {len(df_train)}, After: {len(df_train_)}"
@@ -38,6 +40,10 @@ def sanity_check(df_train: pd.DataFrame,
 	if check_nans:
 		assert df_train_.isna().sum().sum() == 0, "no missing values allowed"
 		assert df_test_.isna().sum().sum() == 0, "no missing values allowed"
+
+	if check_index: 
+		assert df_train.index.tolist() == df_train_.index.tolist(), "Make sure the index is preserved..."
+		assert df_test.index.tolist() == df_test_.index.tolist(), "Make sure the index is preserved..."
 
 
 def samples_with_missing_data(df: pd.DataFrame, 
@@ -135,17 +141,18 @@ def impute_prices(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Dat
 	# first compute the price aggregate using the train data
 	price_agg_product_id, _ = aggregate_prices_by_prod(df_train)
 	
-	# the final step is to merge the train and test data with the aggregated prices and
+	# no aggregates or statistics are computed from the test data
 	df_train_ = pd.merge(df_train, price_agg_product_id, left_on='product_id', right_index=True, how='left').drop(columns=['price']).rename(columns={"mean_price": "price"})
 
 	df_test_ = pd.merge(df_test, price_agg_product_id, left_on='product_id', right_index=True, how='left').drop(columns=['price']).rename(columns={"mean_price": "price"})
 
+	# making sure the number of samples is the same after each preprocessing step
 	sanity_check(df_train, df_test, df_train_, df_test_)
 
 	return df_train_, df_test_
 
-
-def impute_price_with_median_single_df(df: pd.DataFrame, median_imputer: SimpleImputer = None) -> Tuple[pd.DataFrame, SimpleImputer]:
+def impute_price_with_median_single_df(df: pd.DataFrame, 
+									   median_imputer: Optional[SimpleImputer]) -> Tuple[pd.DataFrame, SimpleImputer]:
 	if median_imputer is None:
 		median_imputer = SimpleImputer(strategy='median')
 		df.loc[:, ['price']] = median_imputer.fit_transform(df.loc[:, ['price']])
@@ -155,8 +162,8 @@ def impute_price_with_median_single_df(df: pd.DataFrame, median_imputer: SimpleI
 	return df, median_imputer
 	
 def impute_price_with_median(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-	df_train_, imputer = impute_price_with_median_single_df(df_train)
-	df_test_, _ = impute_price_with_median_single_df(df_test, imputer)
+	df_train_, train_imputer = impute_price_with_median_single_df(df_train, None)
+	df_test_, _ = impute_price_with_median_single_df(df_test, train_imputer)
 	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=False)
 	return df_train_, df_test_
 
@@ -165,12 +172,12 @@ def aggregate_profit_by_store_product(df: pd.DataFrame) -> pd.DataFrame:
 	# the minimum aggregation function is the best estimation we have of the profit a store makes on a specific product
 	return pd.pivot_table(df, values=['profit'], index=['store_id', 'product_id'], aggfunc='min').rename(columns={"profit": "profit_agg"})
 
-def impute_profit_single_df(df: pd.DataFrame, store_profit_by_prod: pd.DataFrame = None):
+def impute_profit_single_df(df: pd.DataFrame, store_profit_by_prod: Optional[pd.DataFrame]):
 
 	if store_profit_by_prod is None:
 		store_profit_by_prod = aggregate_profit_by_store_product(df)
 
-	# add the values to orders
+	# add the values to orders: basically assign the profit estimation to each pair of (store_id and product_id)
 	orders_with_store_prod_profit_estimation = pd.merge(left=df, right=store_profit_by_prod, 
 											how='left', 
 											right_index=True, 
@@ -186,17 +193,21 @@ def impute_profit_single_df(df: pd.DataFrame, store_profit_by_prod: pd.DataFrame
 								left_on='order_id', 
 								right_index=True)
 
-	# make sure to use the 'profit' column if it were not missing in the first place
-	def impute_by_row(row):
-		if np.isnan(row['profit']):
-			row['profit'] = row['profit_agg']
-		return row
 
-	return orders_with_profit_estimation.apply(impute_by_row, axis=1).drop(columns='profit_agg'), store_profit_by_prod
+	missing_profit_samples = orders_with_profit_estimation[orders_with_profit_estimation['profit'].isna()]
+	present_profit_samples = orders_with_profit_estimation[~orders_with_profit_estimation['profit'].isna()]
+	# for the samples with missing profit, we know the values should be imputed as 'profit_agg'
+	missing_profit_samples.loc[:, ['profit']] = missing_profit_samples.loc[:, 'profit_agg'].values
+
+	# concatenate vertically to recover the original dataframe (make sure to sort the index)
+	profit_imputed_orders = pd.concat([present_profit_samples, missing_profit_samples], axis=0).sort_index()
+
+	return profit_imputed_orders.drop(columns=['profit_agg']), store_profit_by_prod
+
 
 def impute_profit(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	# impute the train split
-	df_train_, store_profit_by_prod_train = impute_profit_single_df(df_train)
+	df_train_, store_profit_by_prod_train = impute_profit_single_df(df_train, store_profit_by_prod=None)
 	
 	# use the statistics of the train data to impute the test data
 	df_test_, _ = impute_profit_single_df(df_test, store_profit_by_prod=store_profit_by_prod_train)  
@@ -208,9 +219,9 @@ def impute_profit(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Dat
 
 def encode_product_id_single_df(df: pd.DataFrame, 
 								task:str,
-					  target_encoder: TargetEncoder = None, 
-					  frequent_products: set = None, 
-					  total_portion:float=0.7):
+								target_encoder: Optional[TargetEncoder], 
+								frequent_products: Optional[set], 
+								total_portion:float=0.7):
 
 	if task not in ['regression', 'classification']:
 		raise NotImplementedError(f"expected either {['regression', 'classification']}. Found: {task}")
@@ -221,11 +232,12 @@ def encode_product_id_single_df(df: pd.DataFrame,
 
 	before_mapping_product_ids_unique = len(set(df['product_id'].tolist()).intersection(frequent_products))
 
-	# build a map 
+	# build a map: frequent product ids are mapped to themselves
 	product_id_map = {}
 	for fq in frequent_products:
 		product_id_map[fq] = fq
 
+	# non-frequent product ids are mapped to -1
 	for fq in df['product_id'].values:
 		if fq not in frequent_products:
 			product_id_map[fq] = -1
@@ -241,7 +253,8 @@ def encode_product_id_single_df(df: pd.DataFrame,
 	if target_encoder is None:
 		target_encoder = TargetEncoder(categories='auto', 
 								 target_type='continuous' if task == 'regression' else 'binary', # make sure to set the 'continuous' target_type, otherwise the target encoder assumes it is a classification problem... 
-								 random_state=0, cv=3) # cv=3 just to reduce the computational overhead
+								 random_state=0, 
+								 cv=3) # cv=3 just to reduce the computational overhead
 		X = target_encoder.fit_transform(X, y)
 	else:
 		X = target_encoder.transform(X)
@@ -252,9 +265,16 @@ def encode_product_id_single_df(df: pd.DataFrame,
 	return df, target_encoder, frequent_products
 	
 def encode_product_id(df_train: pd.DataFrame, df_test: pd.DataFrame, task: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-	df_train_, target_encoder, frequent_products = encode_product_id_single_df(df_train, task)
+	df_train_, train_target_encoder, train_frequent_products = encode_product_id_single_df(df_train, 
+																						task, 
+																						target_encoder=None, 
+																						frequent_products=None)
+	
 	# make sure to pass the output of the first call (with train data) to the second function call (with test data)
-	df_test_, _, _ = encode_product_id_single_df(df_test, target_encoder=target_encoder, frequent_products=frequent_products, task=task)
+	df_test_, _, _ = encode_product_id_single_df(df_test, 
+											  target_encoder=train_target_encoder, 
+											  frequent_products=train_frequent_products, 
+											  task=task)
 
 	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
@@ -350,9 +370,9 @@ def encode_store_id_regression(df_train: pd.DataFrame, df_test: pd.DataFrame, fr
 
 
 def encode_store_id_single_df_classification(df: pd.DataFrame, 
-											 freq_threshold:int=100, 
-											 frequent_stores: List[int]=None,
-											 target_encoder:TargetEncoder=None):
+											 frequent_stores: Optional[List[int]],
+											 target_encoder:Optional[TargetEncoder],
+											 freq_threshold:int=100):
 	if frequent_stores is None:
 		frequent_stores = freq_cat_values_count(df, 'store_id', freq_threshold=freq_threshold)
 
@@ -389,9 +409,15 @@ def encode_store_id_single_df_classification(df: pd.DataFrame,
 	return df, target_encoder, frequent_stores
 
 def encode_store_id_classification(df_train: pd.DataFrame, df_test: pd.DataFrame, freq_threshold:int=100):
-	df_train_, target_encoder, frequent_stores = encode_store_id_single_df_classification(df_train, freq_threshold=freq_threshold)
+	df_train_, train_target_encoder, train_frequent_stores = encode_store_id_single_df_classification(df_train, 
+																					   freq_threshold=freq_threshold,
+																					   frequent_stores=None, 
+																					   target_encoder=None)
+
 	# make sure to pass the output of the first call (with train data) to the second function call (with test data)
-	df_test_, _, _ = encode_store_id_single_df_classification(df_test, target_encoder=target_encoder, frequent_stores=frequent_stores)
+	df_test_, _, _ = encode_store_id_single_df_classification(df_test, 
+														   target_encoder=train_target_encoder, 
+														   frequent_stores=train_frequent_stores)
 
 	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
@@ -400,8 +426,8 @@ def encode_store_id_classification(df_train: pd.DataFrame, df_test: pd.DataFrame
 def extract_time_features_single_df(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[:, ['order_hour']] = df['start_prep_date'].dt.hour
     df.loc[: ,['order_day']] = df['start_prep_date'].dt.day_name().map({'Monday':0, 'Tuesday':1, 'Wednesday':2, 'Thursday':3, 'Friday':4, 'Saturday':5, 'Sunday':6})
-    df.drop(columns='start_prep_date', inplace=True)
-    return df
+    return df.drop(columns='start_prep_date')
+
 
 def extract_time_features(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	df_train_, df_test_ = extract_time_features_single_df(df_train), extract_time_features_single_df(df_test)
@@ -412,6 +438,7 @@ def extract_time_features(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tupl
 def num_features_outliers(df_train: pd.DataFrame, df_test: pd.DataFrame, ) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 	for f in ['profit', 'price']:
+		# the extremes are computed from the training data
 		min_val, max_val = eda.compute_iqr_limiters(df_train[f])
 		df_train[f'{f}_is_outlier'] = (~df_train[f].between(min_val, max_val)).astype(int)
 		df_test[f'{f}_is_outlier'] = (~df_test[f].between(min_val, max_val)).astype(int)
@@ -419,14 +446,19 @@ def num_features_outliers(df_train: pd.DataFrame, df_test: pd.DataFrame, ) -> Tu
 	# clip the values for 'delivery_distance'
 	min_dd, max_dd = eda.compute_iqr_limiters(df_train['delivery_distance'])
 
-	# clip the values of delivery distance as the outliers do not have a significant label distribution
+	# clip the values of delivery distance as the outliers do not seem to affect the label distribution...
+	df_train['delivery_distance'] = df_train['delivery_distance'].astype(float)
+	df_test['delivery_distance'] = df_test['delivery_distance'].astype(float)
+
 	df_train.loc[:, ['delivery_distance']] = df_train['delivery_distance'].clip(lower=min_dd, upper=max_dd)
 	df_test.loc[:, ['delivery_distance']] = df_test['delivery_distance'].clip(lower=min_dd, upper=max_dd)
 
 	return df_train, df_test
 
 
-def scale_num_features_single_df(df: pd.DataFrame, scaler: Union[StandardScaler, RobustScaler], num_features: List[str] = None):
+def scale_num_features_single_df(df: pd.DataFrame, 
+								 scaler: Optional[Union[StandardScaler, RobustScaler]], 
+								 num_features: List[str] = None):
 	if num_features is None:
 		num_features = ['profit', 'delivery_distance', 'price']
 
@@ -451,8 +483,8 @@ def scale_num_features_single_df(df: pd.DataFrame, scaler: Union[StandardScaler,
 	return df, scaler
 
 def scale_num_features(df_train: pd.DataFrame, df_test: pd.DataFrame, num_features: List[str]=None) -> Tuple[pd.DataFrame, pd.DataFrame]:
-	df_train_, scaler = scale_num_features_single_df(df_train, num_features)
-	df_test_, _ = scale_num_features_single_df(df_test, scaler, num_features)
+	df_train_, train_scaler = scale_num_features_single_df(df_train, num_features)
+	df_test_, _ = scale_num_features_single_df(df_test, train_scaler, num_features)
 	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
 	return df_train_, df_test_
 
@@ -503,8 +535,10 @@ def group_orders(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.Data
 	df_train_ = group_orders_single_df(df_train, train_products_frequency)
 	df_test_ = group_orders_single_df(df_test, train_products_frequency)
 
-	assert df_train['order_id'].nunique() == df_train_['order_id'].nunique(), "no orders were lost"
-	assert df_test['order_id'].nunique() == df_test_['order_id'].nunique(), "no orders were lost"
+	# df_train.drop(columns=['product_id'], inplace=True)
+
+	assert df_train['order_id'].nunique() == df_train_['order_id'].nunique(), "some orders were lost"
+	assert df_test['order_id'].nunique() == df_test_['order_id'].nunique(), "some orders were lost"
 
 	# sanity_check(df_train, df_test, df_train_, df_test_, check_nans=False)
 	return df_train_, df_test_
@@ -516,7 +550,7 @@ def add_poly_feats(df_train: pd.DataFrame,
 				   num_feats:List[float]=None) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 	if num_feats is None:
-		num_feats = ['product_id', 'planned_prep_time', 'delivery_distance', 'profit', 'price']
+		num_feats = ['product_id_encoded', 'planned_prep_time', 'delivery_distance', 'profit', 'price']
 
 	poly_feats = PolynomialFeatures(degree=(2, degree), interaction_only=False)
 
@@ -538,21 +572,21 @@ def add_poly_feats(df_train: pd.DataFrame,
 
 def process_data_regression(df_train: pd.DataFrame, 
 							df_test: pd.DataFrame,
-							poly_feats:bool=False)-> Tuple[pd.DataFrame, pd.DataFrame]:
+							poly_feats:bool=False, 
+							scale:bool=True)-> Tuple[pd.DataFrame, pd.DataFrame]:
 	# detect outliers in the labels
 	eda.iqr_outliers(df_train, 'y', add_column=True)
-	# remove them
+	# remove them only from the training dataset
 	df_train = df_train[df_train['y_is_outlier'] == False]
 	df_train.drop(columns=['y_is_outlier'], inplace=True)
 
-	df_train.drop(columns=['order_created_date'], inplace=True)
-	df_test.drop(columns=['order_created_date'], inplace=True)
+	# drop the order_created_date as my intuition turned out to be incorrect for this feature
+	df_train.drop(columns=['order_created_date', 'region_id'], inplace=True)
+	df_test.drop(columns=['order_created_date', 'region_id'], inplace=True)
 
-	# encode the region_id using one hot encoding
-
+	# impute prices using the product_id
 	df_train, df_test = impute_prices(df_train, df_test)
-
-	# impute the missing price samples with median
+	# there is a relatively small number of samples left with missing `price`
 	df_train, df_test = impute_price_with_median(df_train, df_test)
 
 	# there should be non missing values from now on 
@@ -568,17 +602,17 @@ def process_data_regression(df_train: pd.DataFrame,
 	df_train, df_test = num_features_outliers(df_train, df_test)	
 
 	# encoding region id using one hot encoding
-	df_train, df_test = encode_region_ids(df_train, df_test)
 
 	# # group records by order_id
-	# df_train, df_test = group_orders(df_train, df_test)
+	df_train, df_test = group_orders(df_train, df_test)
 
 	# remove status id and order_id
 	df_train.drop(columns=['order_id', 'status_id'], inplace=True)
 	df_test.drop(columns=['order_id', 'status_id'], inplace=True)
 
-	# scale numerical features
-	df_train, df_test = scale_num_features(df_train, df_test)	
+	# # scale numerical features
+	if scale:
+		df_train, df_test = scale_num_features(df_train, df_test)	
 
 	# add polynomaial features
 	if poly_feats: 
@@ -587,8 +621,19 @@ def process_data_regression(df_train: pd.DataFrame,
 	return df_train, df_test
 
 # create a similar processing function for classification
-def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame)-> Tuple[pd.DataFrame, pd.DataFrame]:
-	# assume the data is balanced for the moment
+def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame, poly_feats: bool=False)-> Tuple[pd.DataFrame, pd.DataFrame]:
+	# detect outliers in the labels
+	eda.iqr_outliers(df_train, 'y', add_column=True)
+	# remove them only from the training dataset
+	df_train = df_train[df_train['y_is_outlier'] == False]
+
+	df_train = df_train.drop(columns=['y_is_outlier', 'y']).rename(columns={"y_cls": "y"})
+	df_test = df_test.drop(columns=['y']).rename(columns={"y_cls": "y"})	
+
+	# drop the order_created_date as my intuition turned out to be incorrect for this feature
+	df_train.drop(columns=['order_created_date', 'region_id'], inplace=True)
+	df_test.drop(columns=['order_created_date', 'region_id'], inplace=True)
+
 
 	# the first few steps 
 	df_train, df_test = impute_prices(df_train, df_test)
@@ -607,82 +652,106 @@ def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame)->
 	# extract time features
 	df_train, df_test = extract_time_features(df_train, df_test)
 
+	df_train, df_test = num_features_outliers(df_train, df_test)	
+
+	# # group records by order_id
+	df_train, df_test = group_orders(df_train, df_test)
+
 	# remove status id and order_id
 	df_train.drop(columns=['order_id', 'status_id'], inplace=True)
 	df_test.drop(columns=['order_id', 'status_id'], inplace=True)
 
-	# scale numerical features
+	# # scale numerical features
 	df_train, df_test = scale_num_features(df_train, df_test)	
+
+	if poly_feats: 
+		df_train, df_test = add_poly_feats(df_train, df_test)
 
 	return df_train, df_test
 
 
 
-if __name__ == '__main__':
-	import data_preparation as dpre
+def set_up():
 	db_file = os.path.join(DATA_FOLDER, 'F24.ML.Assignment.One.data.db')
 	df_save_file = os.path.join(DATA_FOLDER, 'data.csv')
-	df = dpre.data_to_df(db_file, 
+	org_data = dpre.data_to_df(db_file, 
 			df_save_file, 
 			overwrite=False # no need to execute the same lengthy query if the .csv file already exists...
 			)
-	all_data = dpre.prepare_all_data_regression(df)
-
-	df_train, df_test = dpre.df_split_regression(all_data, splits=(0.9, 0.1))
-	# everything seems to checkout !!!
-	len(df_train), len(df_test), round(len(df_train) / len(df_test), 4) 
-
-	df_train, df_test = process_data_regression(df_train, df_test)
-
-	# eda.iqr_outliers(df_train, 'y', add_column=True)
-	# # remove them
-	# df_train = df_train[df_train['is_outlier'] == False]
-	# df_train.drop(columns=['is_outlier'], inplace=True)
-
-	# df_train, df_test = impute_prices(df_train, df_test)
-
-	# # impute the missing price samples with median
-	# df_train, df_test = impute_price_with_median(df_train, df_test)
-
-	# # there should be non missing values from now on 
-	# df_train, df_test = impute_profit(df_train, df_test)
-
-	# # encode product and store id
-	# df_train, df_test = encode_product_id(df_train, df_test, task='regression')
-	# df_train, df_test = encode_store_id_regression(df_train, df_test)
-
 	
-	# # extract time features
-	# df_train, df_test = extract_time_features(df_train, df_test)
+	# # the regression task
+	all_data_regression = dpre.prepare_all_data_regression(org_data)
+	train, test = dpre.df_split_regression(all_data_regression, splits=(0.9, 0.1))
+
+	# process without polynomial features
+	df_train_simple, df_test_simple = process_data_regression(train, test, poly_feats=False)
+
+	y_train_simple = df_train_simple.pop('y')
+	y_test_simple = df_test_simple.pop('y')
+
+	p_train, p_test = os.path.join(DATA_FOLDER, 'regression', 'train_simple.csv'), os.path.join(DATA_FOLDER, 'regression', 'test_simple.csv')
+
+	df_train_simple.to_csv(p_train, index=False)
+	df_test_simple.to_csv(p_test, index=False)
+
+	y_train_simple.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_simple.csv'), index=False)
+	y_test_simple.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_simple.csv'),index=False)
 
 
-	p_train, p_test = os.path.join(DATA_FOLDER, 'regression', 'train_v3.csv'), os.path.join(DATA_FOLDER, 'regression', 'test_v3.csv')
+	# with polynomial features
+	all_data_regression = dpre.prepare_all_data_regression(org_data)
+	train, test = dpre.df_split_regression(all_data_regression, splits=(0.9, 0.1))
 
-	df_train.to_csv(p_train, index=False)
-	df_test.to_csv(p_test, index=False)
+	df_train_poly, df_test_poly = process_data_regression(train, test, poly_feats=True)
+	# extract the label
+	y_train_poly = df_train_poly.pop('y')
+	y_test_poly = df_test_poly.pop('y')
 
-	y_train = df_train.pop('y')
-	y_test = df_test.pop('y')
+	p_train, p_test = os.path.join(DATA_FOLDER, 'regression', 'train_poly.csv'), os.path.join(DATA_FOLDER, 'regression', 'test_poly.csv')
 
-	y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.csv'), index=False)
-	y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.csv'),index=False)
+	df_train_poly.to_csv(p_train, index=False)
+	df_test_poly.to_csv(p_test, index=False)
 
-
-	# df_train.to_csv(p_train, index=False)
-	# df_test.to_csv(p_test, index=False)
-	# y_train.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.csv'), index=False)
-	# y_test.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.csv'),index=False)
-
-
-	# df_train, df_test = pd.read_csv(p_train), pd.read_csv(p_test)
+	y_train_poly.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_poly.csv'), index=False)
+	y_test_poly.to_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_poly.csv'),index=False)
 
 
-	# df_train, df_test = process_data_regression(df_train, df_test)
+	# the classification task
+	all_data_classification = dpre.prepare_all_data_classification(org_data)
+	train, test = dpre.df_split_classification(all_data_classification, splits=(0.9, 0.1))
 
-	# # split the data
-	# df_train, df_test = dpre.df_split_classification(all_data, splits=(0.9, 0.1))
+	# simple features: no poly features
+	df_train_simple, df_test_simple = process_data_classification(train, test, poly_feats=False)
+	# extract the label
+	y_train_simple = df_train_simple.pop('y')
+	y_test_simple = df_test_simple.pop('y')
 
-	# df_train = df_train.drop(columns='y').rename(columns={"y_cls": "y"})
-	# df_test = df_test.drop(columns='y').rename(columns={"y_cls": "y"})
+	p_train, p_test = os.path.join(DATA_FOLDER, 'classification', 'train_simple.csv'), os.path.join(DATA_FOLDER, 'classification', 'test_simple.csv')
 
-	# df_train, df_test = process_data_classification(df_train, df_test)
+	df_train_simple.to_csv(p_train, index=False)
+	df_test_simple.to_csv(p_test, index=False)
+
+	y_train_simple.to_csv(os.path.join(DATA_FOLDER, 'classification', 'y_train_simple.csv'), index=False)
+	y_test_simple.to_csv(os.path.join(DATA_FOLDER, 'classification', 'y_test_simple.csv'),index=False)
+
+
+	# poly features
+	all_data_classification = dpre.prepare_all_data_classification(org_data)
+	train, test = dpre.df_split_classification(all_data_classification, splits=(0.9, 0.1))
+
+	df_train_poly, df_test_poly = process_data_classification(train, test, poly_feats=True)
+	# extract the label
+	y_train_poly = df_train_poly.pop('y')
+	y_test_poly = df_test_poly.pop('y')
+
+	p_train, p_test = os.path.join(DATA_FOLDER, 'classification', 'train_poly.csv'), os.path.join(DATA_FOLDER, 'classification', 'test_poly.csv')
+
+	df_train_poly.to_csv(p_train, index=False)
+	df_test_poly.to_csv(p_test, index=False)
+
+	y_train_poly.to_csv(os.path.join(DATA_FOLDER, 'classification', 'y_train_poly.csv'), index=False)
+	y_test_poly.to_csv(os.path.join(DATA_FOLDER, 'classification', 'y_test_poly.csv'),index=False)
+
+
+# if __name__ == '__main__':
+# 	pass 
