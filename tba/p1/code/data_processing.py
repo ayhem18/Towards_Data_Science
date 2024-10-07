@@ -205,14 +205,14 @@ def impute_profit_single_df(df: pd.DataFrame, store_profit_by_prod: Optional[pd.
 	return profit_imputed_orders.drop(columns=['profit_agg']), store_profit_by_prod
 
 
-def impute_profit(df_train: pd.DataFrame, df_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def impute_profit(df_train: pd.DataFrame, df_test: pd.DataFrame, check_nans:bool=True) -> Tuple[pd.DataFrame, pd.DataFrame]:
 	# impute the train split
 	df_train_, store_profit_by_prod_train = impute_profit_single_df(df_train, store_profit_by_prod=None)
 	
 	# use the statistics of the train data to impute the test data
 	df_test_, _ = impute_profit_single_df(df_test, store_profit_by_prod=store_profit_by_prod_train)  
 
-	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=True)
+	sanity_check(df_train, df_test, df_train_, df_test_, check_nans=check_nans)
 	
 	return df_train_, df_test_
 
@@ -672,6 +672,10 @@ def process_data_classification(df_train: pd.DataFrame, df_test: pd.DataFrame, p
 
 
 def set_up():
+	os.makedirs(os.path.join(DATA_FOLDER, 'regression'), exist_ok=True)
+	os.makedirs(os.path.join(DATA_FOLDER, 'classification'), exist_ok=True)
+	os.makedirs(os.path.join(DATA_FOLDER, 'models'), exist_ok=True)
+	
 	db_file = os.path.join(DATA_FOLDER, 'F24.ML.Assignment.One.data.db')
 	df_save_file = os.path.join(DATA_FOLDER, 'data.csv')
 	org_data = dpre.data_to_df(db_file, 
@@ -751,7 +755,3 @@ def set_up():
 
 	y_train_poly.to_csv(os.path.join(DATA_FOLDER, 'classification', 'y_train_poly.csv'), index=False)
 	y_test_poly.to_csv(os.path.join(DATA_FOLDER, 'classification', 'y_test_poly.csv'),index=False)
-
-
-# if __name__ == '__main__':
-# 	pass 

@@ -160,8 +160,12 @@ def train_ann(X_train: pd.DataFrame,
               ann_hidden_units: List[int],
               num_epochs: int,
               version_number: int,
+              task: str,
               save_model_path: Optional[Union[str, Path]]=None
               ):
+
+    if task not in ['regression', 'classification']:
+        raise NotImplementedError(f"task must be in : {['regression', 'classification']}")
 
     seed_everything(seed=0)
 
@@ -171,7 +175,7 @@ def train_ann(X_train: pd.DataFrame,
 
     # dataset
     train_ds = DataFrameDs(X_train, y_train)
-    train_dl = DataLoader(train_ds, batch_size=1024, shuffle=True, drop_last=True, worker_init_fn=partial(set_worker_seed, seed=0))
+    train_dl = DataLoader(train_ds, batch_size=512, shuffle=True, drop_last=True, worker_init_fn=partial(set_worker_seed, seed=0))
 
     test_ds = DataFrameDs(X_test, y_test)
     test_dl = DataLoader(test_ds, batch_size=1024, shuffle=False, drop_last=False, worker_init_fn=partial(set_worker_seed, seed=0))
@@ -179,7 +183,10 @@ def train_ann(X_train: pd.DataFrame,
     optimizer = Adam(net.parameters(), lr=0.01)
 
     lr_scheduler = LinearLR(optimizer=optimizer, start_factor=1, end_factor=0.01, total_iters=num_epochs) 
-    loss = torch.nn.MSELoss()
+    if task == 'regression':
+        loss = torch.nn.MSELoss()
+    else:
+        loss = torch.nn.BCEWithLogitsLoss()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -243,7 +250,7 @@ def train_ann(X_train: pd.DataFrame,
 
     model_name = 'ann'
     if save_model_path is None:
-        save_dir = os.path.join(DATA_FOLDER, 'models', model_name, f'v_{version_number}')        
+        save_dir = os.path.join(DATA_FOLDER, 'models', task, model_name, f'v_{version_number}')        
         os.makedirs(save_dir, exist_ok=True)
         save_model_path = os.path.join(save_dir, f'{model_name}.pt')
 
@@ -261,19 +268,20 @@ def train_ann(X_train: pd.DataFrame,
 
 
 if __name__ == '__main__':
-    df_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'train_v3.2.csv'))
-    y_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_v3.2.csv'))
+    df_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'train_poly.csv'))
+    y_train = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_train_poly.csv'))
 
-    df_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'test_v3.2.csv'))
-    y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_v3.2.csv'))
+    df_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'test_poly.csv'))
+    y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'regression', 'y_test_poly.csv'))
 
     net, train_metrics, test_metrics = train_ann(X_train=df_train, 
                                                  y_train=y_train, 
                                                  X_test=df_test, 
                                                  y_test=y_test,
                                                  ann_hidden_units=[512, 256, 32], 
-                                                 num_epochs=25,
-                                                 version_number=3.3)
+                                                 num_epochs=40,
+                                                 task='regression',
+                                                 version_number="simple")
 
     print(train_metrics)
     print(test_metrics)
