@@ -262,6 +262,7 @@ def train_ann(X_train: pd.DataFrame,
             torch.save(net.state_dict(), path)
         else:
             with open(path, 'wb') as f:
+                
                 pickle.dump(obj, f)
 
     return net, train_metrics, test_metrics
