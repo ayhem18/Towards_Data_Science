@@ -82,32 +82,56 @@ def find_best_next_segment(seg_index: int, segments: List[np.ndarray]):
 	return best_index, best_order 
 
 
+def find_consecutive_time_stamps(corrs: np.ndarray, k_closest:int):
+	closest_groups = np.argsort(corrs, axis=-1)[:, -k_closest:-1]	
+
+	possible_pairs = set()
+
+	for i in range(len(corrs)):
+		possible_neighbors = closest_groups[i]
+		for pn in possible_neighbors:
+			if i in closest_groups[pn]:
+				possible_pairs.add((i, pn))
+
+	return possible_pairs
+
+
 if __name__ == '__main__':
-    current_dir = os.getcwd()
+	current_dir = os.path.dirname(os.path.realpath(__file__))
+	# let's see how it goes
+	npy_file_path = os.path.join(current_dir, 'ihb.npy')
+	all_data = np.load(npy_file_path)
 
-    # let's see how it goes
-    npy_file_path = os.path.join(current_dir, 'ihb.npy')
-    all_data = np.load(npy_file_path)
+
+	g1 = [all_data[i] for i in range(all_data.shape[0]) if np.isnan(all_data[i]).sum() == 0]
+	g2 = [all_data[i] for i in range(all_data.shape[0]) if np.isnan(all_data[i]).sum() == 460]
+
+	g2_nan_distribution = np.zeros(shape=(len(g2), len(g2)))
+
+	for i1, element1 in enumerate(g2):
+		for i2, element2 in enumerate(g2):
+			g2_nan_distribution[i1][i2] = all(np.sum(np.isnan(element1), axis=1) == np.sum(np.isnan(element2), axis=1))
+	g2 = [scan[:, :-46] for scan in g2]
+
+	g1_pairs, g2_pairs = build_ac_pairs(g1), build_ac_pairs(g2)
+	avg_g1, avg_g2 = unified_segment_rep(g1, g1_pairs), unified_segment_rep(g2, g2_pairs)
 
 
-    g1 = [all_data[i] for i in range(all_data.shape[0]) if np.isnan(all_data[i]).sum() == 0]
-    g2 = [all_data[i] for i in range(all_data.shape[0]) if np.isnan(all_data[i]).sum() == 460]
+	# find the pairs using the mean and variance
+	feats_mean = np.concatenate([np.mean(x, axis=0, keepdims=True) for x in avg_g1])
+	feats_var = np.concatenate([np.var(x, axis=0, keepdims=True) for x in avg_g1])
 
-    g2_nan_distribution = np.zeros(shape=(len(g2), len(g2)))
+	# compute correlation 
+	corr_feat_var = np.corrcoef(feats_var)
+	corr_feat_mean = np.corrcoef(feats_mean)
 
-    for i1, element1 in enumerate(g2):
-        for i2, element2 in enumerate(g2):
-            g2_nan_distribution[i1][i2] = all(np.sum(np.isnan(element1), axis=1) == np.sum(np.isnan(element2), axis=1))
-    g2 = [scan[:, :-46] for scan in g2]
+	assert corr_feat_var.shape == (80, 80)
+	assert corr_feat_mean.shape == (80, 80)
 
-    g1_pairs, g2_pairs = build_ac_pairs(g1), build_ac_pairs(g2)
-    avg_g1, avg_g2 = unified_segment_rep(g1, g1_pairs), unified_segment_rep(g2, g2_pairs)
+	pairs_with_var = find_consecutive_time_stamps(corr_feat_var, 2)
+	pairs_with_mean = find_consecutive_time_stamps(corr_feat_mean, 2)	
 
-    # try to find the pairs somehow
-    pairs_avg_g1 = set()
-
-    for i in range(len(avg_g1)):
-        j = find_best_next_segment(i, segments=avg_g1)	
-        pairs_avg_g1.add((i, j))
 	
+
+
     
