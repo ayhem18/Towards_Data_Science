@@ -96,6 +96,39 @@ def find_consecutive_time_stamps(corrs: np.ndarray, k_closest:int):
 	return possible_pairs
 
 
+
+from sklearn.decomposition import PCA
+
+def estimate_consecutive_samples(seg1: np.ndarray, seg2: np.ndarray, eval_method: str) -> float:
+	if eval_method not in ['avg', 'count']:
+		raise NotImplementedError("eval_method non-implemented")
+
+	assert seg1.shape == seg2.shape, "both segments same shape"
+	c_seg1 = np.concatenate([seg1, seg2], axis=0)
+	c_seg2 = np.concatenate([seg2, seg1], axis=0)
+
+	assert c_seg1.shape[0] == 2 * seg1.shape[0] and c_seg1.shape[1] == seg1.shape[1], "concatenation correct"
+	assert c_seg2.shape[0] == 2 * seg2.shape[0] and c_seg2.shape[1] == seg2.shape[1], "concatenation correct"
+
+	if eval_method == 'count':
+		pca1 = PCA(n_components=0.9)
+		pca2 = PCA(n_components=0.9)
+	else:
+		pca1 = PCA(n_components=10)
+		pca2 = PCA(n_components=10)
+
+	pca1.fit(seg1)
+	pca2.fit(seg2)
+
+	# extract the explained ratio
+	var_ratio1 = pca1.explained_variance_ratio_
+	var_ratio2 = pca2.explained_variance_ratio_
+
+	if eval_method == 'count':
+		return min(len(var_ratio1), len(var_ratio2))
+
+	return max(np.mean(var_ratio1), np.mean(var_ratio2))
+
 if __name__ == '__main__':
 	current_dir = os.path.dirname(os.path.realpath(__file__))
 	# let's see how it goes
@@ -121,17 +154,17 @@ if __name__ == '__main__':
 	feats_mean = np.concatenate([np.mean(x, axis=0, keepdims=True) for x in avg_g1])
 	feats_var = np.concatenate([np.var(x, axis=0, keepdims=True) for x in avg_g1])
 
-	# compute correlation 
-	corr_feat_var = np.corrcoef(feats_var)
-	corr_feat_mean = np.corrcoef(feats_mean)
+	# # compute correlation 
+	# corr_feat_var = np.corrcoef(feats_var)
+	# corr_feat_mean = np.corrcoef(feats_mean)
 
-	assert corr_feat_var.shape == (80, 80)
-	assert corr_feat_mean.shape == (80, 80)
+	# assert corr_feat_var.shape == (80, 80)
+	# assert corr_feat_mean.shape == (80, 80)
 
-	pairs_with_var = find_consecutive_time_stamps(corr_feat_var, 2)
-	pairs_with_mean = find_consecutive_time_stamps(corr_feat_mean, 2)	
+	# pairs_with_var = find_consecutive_time_stamps(corr_feat_var, 2)
+	# pairs_with_mean = find_consecutive_time_stamps(corr_feat_mean, 2)	
 
-	
+	estimate = estimate_consecutive_samples(avg_g1[0], avg_g1[1], eval_method='count')	
 
 
     
