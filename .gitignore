@@ -58,4 +58,8 @@ tds_env
 *.pt
 *.pth 
 
+*.html
+
+da_env
+
 
