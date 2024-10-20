@@ -1,7 +1,7 @@
 import pandas as pd, numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 def visualize_discrete_values(df:pd.DataFrame, 
                               feat_col: str, 
@@ -14,7 +14,7 @@ def visualize_discrete_values(df:pd.DataFrame,
 
                               axes: plt.axes = None,
                               show: bool = True,
-                              values_as_xticks:bool=False
+                              figsize: Optional[Tuple] = None
                               ):
     
     if feat_name is None:
@@ -31,24 +31,19 @@ def visualize_discrete_values(df:pd.DataFrame,
     else:
         values = df[feat_col].value_counts(ascending=False).index[:n_most_freq].tolist()
 
+    if figsize is None:
+        figsize = (n_most_freq - 2, 6)
+
     # build the list
     if axes is None:
-        _, axes = plt.subplots(figsize=(n_most_freq - 2, 8))
+        _, axes = plt.subplots(figsize=figsize)
 
     data = [df[df[feat_col] == val][label_col].tolist() for val in values]
 
     # plot
-    # accroding to the documentation: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.boxplot.html
-    # tick_labels corresponding to the labels associated with each inner boxplot
+    axes.boxplot(data, tick_labels=values)
 
-
-    if values_as_xticks:
-        axes.boxplot(data)
-    else:
-        axes.boxplot(data, positions=values)
-
-    axes.set_title(f"{label_name} distribution in terms of {n_most_freq} values in {feat_name}")
-   
+    axes.set_title(f"{label_name} distribution in terms of {n_most_freq} most frequent values in {feat_name}")
     axes.set_xlabel(feat_name)
     axes.set_ylabel(label_name)
 
