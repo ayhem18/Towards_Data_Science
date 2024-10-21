@@ -217,7 +217,7 @@ def train_ann(X_train: pd.DataFrame,
             optimizer.step()
 
             if task == "classification":
-                train_acc += torch.mean((torch.argmax(y_model) == y).to(torch.float32)) 
+                train_acc += torch.mean(((y_model >= 0) == y).to(torch.float32)).item()
 
         lr_scheduler.step() 
 
@@ -230,7 +230,7 @@ def train_ann(X_train: pd.DataFrame,
 
 
         val_epoch_loss = 0
-
+        val_acc = 0
         # set to eval model
         net.eval()
         with torch.no_grad():
@@ -243,9 +243,16 @@ def train_ann(X_train: pd.DataFrame,
             
                 val_epoch_loss += loss_obj.item()
 
+            if task == "classification":
+                val_acc += torch.mean(((y_model >= 0) == y).to(torch.float32)).item()
+
+
         val_epoch_loss /= len(test_dl)
         print(f"epoch: {i + 1}: val loss: {val_epoch_loss}")
         train_metrics[f"val_loss_epoch_ {i + 1}"] = val_epoch_loss
+
+        if task == "classification":
+            train_metrics[f"val_accuracy_{i + 1}"] = val_acc / len(test_dl) 
 
 
     # predict on the train dataset
