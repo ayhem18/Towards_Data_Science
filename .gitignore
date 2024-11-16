@@ -66,3 +66,7 @@ Machine_Learning/__uni/data/caltech256
 
 *.mat
 *.tgz
+
+*pytorch_modular*
+
+*tfevents*

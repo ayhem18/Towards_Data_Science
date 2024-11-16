@@ -5,7 +5,6 @@ This script contains the implementations of the different Convolutional Neural N
 import os, torch
 import torchvision.transforms as tr
 from pathlib import Path
-
 from torch.optim.lr_scheduler import ExponentialLR
 
 
@@ -47,7 +46,7 @@ class ImprovedCnn(torch.nn.Module):
                             padding=(1, 1)),
 
             torch.nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2), padding=0),
-            torch.nn.BatchNorm2d(32),
+            torch.nn.BatchNorm2d(128),
             torch.nn.ReLU(),
 
             torch.nn.Conv2d(in_channels=128, 
@@ -69,7 +68,7 @@ class ImprovedCnn(torch.nn.Module):
                             padding=(1, 1)),
 
             torch.nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2), padding=0),
-            torch.nn.BatchNorm2d(64),
+            torch.nn.BatchNorm2d(256),
             torch.nn.ReLU(),
 
             torch.nn.Conv2d(in_channels=256, 
@@ -91,7 +90,7 @@ class ImprovedCnn(torch.nn.Module):
                             padding=(1, 1)),
 
             torch.nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2), padding=0),
-            torch.nn.BatchNorm2d(128),
+            torch.nn.BatchNorm2d(1024),
             torch.nn.ReLU(),
         )
 
@@ -111,23 +110,32 @@ class ImprovedCnn(torch.nn.Module):
     
 
 
+from torch.optim.sgd import SGD
+
 if __name__ == '__main__':
     from common import train_model, load_data
     cnn = ImprovedCnn()
 
     # add mini-max scaling 
-    test_ds, val_ds, train_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.Resize(size=(200, 200)), # resize to the same input shape
-                                                                        tr.ToTensor(), # convert to a tensor 
-                                                                        ]) 
+    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.ToTensor(), # convert to a tensor 
+                                                                    tr.Resize(size=(200, 200)), # resize to the same input shape
+                                                                    tr.Lambda(lambda x: x / 255.0) 
+                                                                    ]) 
 
-    train_model(train_ds, 
-          val_ds, 
-          net = cnn, 
-          num_epochs=20, 
-          num_warmup_epochs=5, 
-          save_model_path=os.path.join(DATA_FOLDER, 'models', 'bcnn'),
-          model_name="improved_cnn",
-          learning_scheduler_cls=ExponentialLR,
-          learning_scheduler_kwargs={"gamma": 0.9},
-          initial_lr= 0.01
-          )
+
+    optimizer = SGD(params=cnn.parameters(), lr=0.001,)
+    lr_scheduler = ExponentialLR(optimizer=optimizer, gamma=0.95)
+
+    train_model(
+            train_ds, 
+            val_ds, 
+            train_batch_size=32, 
+            test_batch_size=32,
+            model_name="baseline_cnn",
+            net = cnn, 
+            optimizer=optimizer,
+            learning_scheduler=lr_scheduler,
+            num_epochs=20, 
+            num_warmup_epochs=5, 
+            save_model_path=os.path.join(DATA_FOLDER, 'models', 'cnn'),
+            )

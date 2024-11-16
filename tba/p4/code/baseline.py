@@ -5,19 +5,11 @@ This script contains the implementations of the different Convolutional Neural N
 
 import torch, os
 import torchvision.transforms as tr
-
-from functools import partial
-from tqdm import tqdm
-from typing import Union, Optional
 from pathlib import Path
-
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
 from torch.optim.sgd import SGD
 
 from torch.utils.tensorboard import SummaryWriter
 
-from common import seed_everything, set_worker_seed, load_data
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -71,7 +63,8 @@ class BaselineCnn(torch.nn.Module):
     
 
 if __name__ == '__main__':
-    from common import train_model
+    from common import train_model, load_data
+
     bcnn = BaselineCnn()
 
     # add mini-max scaling 
@@ -80,10 +73,20 @@ if __name__ == '__main__':
                                                                         tr.Lambda(lambda x: x / 255.0) # min
                                                                         ]) 
 
-    train_model(train_ds, 
-                val_ds, 
-                net = bcnn, 
-                num_epochs=10, 
-                save_model_path=os.path.join(DATA_FOLDER, 'models', 'bcnn'),
-                model_name='bcnn')
+    optimizer = SGD(params=bcnn.parameters(), lr=0.001,)
+
+    train_model(
+            train_ds, 
+            val_ds, 
+            train_batch_size=256, 
+            test_batch_size=512,
+            net = bcnn, 
+            model_name="baseline_cnn",
+            optimizer=optimizer,
+            learning_scheduler=None, # no learning rate scheduling
+            num_epochs=10, 
+            num_warmup_epochs=None, # no warmup epochs 
+            save_model_path=os.path.join(DATA_FOLDER, 'models', 'cnn'),
+            )
+
 
