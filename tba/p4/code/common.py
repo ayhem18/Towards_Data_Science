@@ -9,9 +9,9 @@ from typing import List, Union
 import torch, os, pickle, random
 import pandas as pd, numpy as np 
 
-from typing import List, Iterator, Union, Optional, Tuple
 from pathlib import Path
-
+from typing import List, Iterator, Union, Optional, Tuple
+from torch.utils.data import DataLoader, Dataset
 
 def seed_everything(seed: int = 69):
     # let's set reproducility
@@ -52,3 +52,49 @@ def load_data(parent_dir: Union[str, Path], augs: List):
                                             download=True) 
                 for s, d in zip(splits, [train, val, test])]
     
+
+def predict(net: torch.nn.Module, test_ds: Dataset) -> np.ndarray:
+    dl = DataLoader(test_ds, batch_size=128, shuffle=False, drop_last=False)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # set the network to the evaluation model
+    net.eval()
+
+    y_pred = None
+    with torch.no_grad():
+        for x, _ in dl:
+            x = x.to(device)
+            y_hat = net.forward(x).cpu().numpy()
+            
+            if y_hat.ndim == 1:
+                y_hat = np.expand_dims(y_hat, axis=-1)
+
+            if y_pred is None:
+                y_pred = y_hat
+            else:
+                y_pred = np.concatenate([y_pred, y_hat], axis=0)
+
+    y_pred = y_pred.squeeze()
+    return y_pred
+
+
+
+from torch.optim.optimizer import Optimizer
+from torch.optim.lr_scheduler import LRScheduler, SequentialLR, LinearLR
+
+
+def set_warmup_epochs(optimizer: Optimizer,
+                    main_lr_scheduler: LRScheduler, 
+                    num_warmup_epochs: int) -> SequentialLR:
+
+    warmup_lr_scheduler = LinearLR(optimizer=optimizer, 
+                        total_iters=num_warmup_epochs, 
+                        start_factor=0.01,
+                        end_factor=1,
+                        )
+
+    final_lr_scheduler = SequentialLR(optimizer=optimizer, 
+                                schedulers=[warmup_lr_scheduler, main_lr_scheduler], 
+                                milestones=[num_warmup_epochs])
+
+    return final_lr_scheduler
