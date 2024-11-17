@@ -41,15 +41,9 @@ def load_train_data(parent_dir: Union[str, Path], augs: List):
 
     final_augs = [tr.ToTensor(), tr.Resize((200, 200))]
 
-    # train_augs = [tr.RandomVerticalFlip(p=0.5), 
-    #               tr.RandomHorizontalFlip(p=0.5), 
-    #               tr.RandomResizedCrop(size=(200, 200), scale=(0.8, 1)),
-    #               tr.GaussianBlur(kernel_size=(3, 3)),
-    #               tr.RandomRotation(degrees=(0, 10))
-    #               ]
-
     # create a specical augmentation that samples 2 augmentations to apply instead of applying each at once 
-    final_augs.append(tr.Lambda(lambda x: sample_from_random_augmentations(augs=augs, sample=x, max_augs_per_sample=2)))
+    if len(augs) > 0:
+        final_augs.append(tr.Lambda(lambda x: sample_from_random_augmentations(augs=augs, sample=x, max_augs_per_sample=2)))
 
     train_ds = torchvision.datasets.Flowers102(root=train_dir, 
                                             split="test", 
@@ -246,6 +240,8 @@ def calculate_accuracy(model: torch.nn.Module,
             y_model = model.forward(x).squeeze()        
             correct_samples += torch.sum((torch.argmax(y_model, dim=-1) == y).to(torch.float32)).item() 
             total_samples += len(x)
+
+    
 
     return round(correct_samples / total_samples, 4)
 

@@ -4,12 +4,8 @@ This script contains the implementations of the different Convolutional Neural N
 
 
 import torch, os
-import torchvision.transforms as tr
 from pathlib import Path
 from torch.optim.sgd import SGD
-
-from torch.utils.tensorboard import SummaryWriter
-
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -68,10 +64,7 @@ if __name__ == '__main__':
     bcnn = BaselineCnn()
 
     # add mini-max scaling 
-    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.ToTensor(), # convert to a tensor 
-                                                                        tr.Resize(size=(200, 200)), # resize to the same input shape
-                                                                        # tr.Lambda(lambda x: x / 255.0) # min
-                                                                        ]) 
+    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[]) 
 
     optimizer = SGD(params=bcnn.parameters(), lr=0.001,)
 

@@ -117,25 +117,22 @@ if __name__ == '__main__':
     cnn = ImprovedCnn()
 
     # add mini-max scaling 
-    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.ToTensor(), # convert to a tensor 
-                                                                    tr.Resize(size=(200, 200)), # resize to the same input shape
-                                                                    # tr.Lambda(lambda x: x / 255.0) 
-                                                                    ]) 
+    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[]) 
 
 
-    optimizer = SGD(params=cnn.parameters(), lr=0.001,)
+    optimizer = SGD(params=cnn.parameters(), lr=0.1,)
     lr_scheduler = ExponentialLR(optimizer=optimizer, gamma=0.95)
 
     train_model(
             train_ds, 
             val_ds, 
-            train_batch_size=256, 
+            train_batch_size=512, 
             test_batch_size=512,
             model_name="improved_cnn",
             net = cnn, 
             optimizer=optimizer,
             learning_scheduler=lr_scheduler,
             num_epochs=20, 
-            num_warmup_epochs=5, 
+            num_warmup_epochs=None, 
             save_model_path=os.path.join(DATA_FOLDER, 'models', 'cnn'),
             )
