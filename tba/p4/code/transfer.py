@@ -94,35 +94,38 @@ from torch.optim.sgd import SGD
 if __name__ == '__main__':
     from common import train_model, load_data
 
-    # add mini-max scaling 
-    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.ToTensor(), # convert to a tensor 
-                                                                    tr.Resize(size=(200, 200)), # resize to the same input shape
-                                                                    tr.Lambda(lambda x: x / 255.0) # min
-                                                                    ]) 
+    train_augs = [tr.RandomVerticalFlip(p=0.5), 
+                  tr.RandomHorizontalFlip(p=0.5), 
+                  tr.RandomResizedCrop(size=(200, 200), scale=(0.8, 1)),
+                  tr.GaussianBlur(kernel_size=(3, 3)),
+                  tr.RandomRotation(degrees=(0, 10))
+                  ]
+
+    train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=train_augs) 
 
     resnet = ResnetClassifier(input_shape=(3, 200, 200), 
                               num_classes=102, 
-                              num_fc_layers=3, # add 3 fully connected layers 
-                              dropout=0.1, # apply 0.1 dropout at each fc layer
+                              num_fc_layers=4, # add 4 fully connected layers 
+                              dropout=0.2, # apply 0.2 dropout at each fc layer
                               fe_num_blocks=-1, # use the entire resnet model (the class has the ability to choose parts of the model)
-                              freeze=4, # freeze 4 out 5 residual blocks
+                              freeze=False, 
                               architecture=50 # Resnet50 should do the trick
                               )
 
 
-    optimizer = SGD(params=resnet.parameters(), lr=0.01,)
-    lr_scheduler = ExponentialLR(optimizer=optimizer, gamma=0.9)
+    optimizer = SGD(params=resnet.parameters(), lr=0.1,)
+    lr_scheduler = ExponentialLR(optimizer=optimizer, gamma=0.99)
 
     train_model(
             train_ds, 
-            val_ds, 
-            train_batch_size=256, 
+            test_ds, 
+            train_batch_size=512, 
             test_batch_size=512,
             model_name="resnet",
             net = resnet, 
             optimizer=optimizer,
             learning_scheduler=lr_scheduler,
-            num_epochs=20, 
-            num_warmup_epochs=5, 
+            num_epochs=40, 
+            num_warmup_epochs=None, 
             save_model_path=os.path.join(DATA_FOLDER, 'models', 'resnet'),
             )

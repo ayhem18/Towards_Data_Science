@@ -1,4 +1,4 @@
-import torch, os
+import torch, os, torchvision
 import torchvision.transforms as tr
 
 from pathlib import Path
@@ -27,21 +27,58 @@ while 'data' not in os.listdir(current):
 
 DATA_FOLDER = os.path.join(current, 'data')
 
+import random
+
+def sample_from_random_augmentations(augs: List, sample: torch.Tensor, max_augs_per_sample:int = 3,):
+    n = random.randint(0, min(max_augs_per_sample, len(augs)))
+    if (n == 0):
+        return sample
+    return tr.Compose(random.sample(augs, n))(sample)
 
 
-def load_data(parent_dir: Union[str, Path], augs: List):
-    splits = ['train', 'val', 'test']
-    train, val, test = [os.path.join(parent_dir, s) for s in splits]
+def load_train_data(parent_dir: Union[str, Path], augs: List):
+    train_dir = os.path.join(parent_dir, "train")
 
-    for s in [train, val, test]:
-        os.makedirs(s, exist_ok=True)
+    final_augs = [tr.ToTensor(), tr.Resize((200, 200))]
 
-    return [torchvision.datasets.Flowers102(root=d, 
-                                            split=s, 
+    # train_augs = [tr.RandomVerticalFlip(p=0.5), 
+    #               tr.RandomHorizontalFlip(p=0.5), 
+    #               tr.RandomResizedCrop(size=(200, 200), scale=(0.8, 1)),
+    #               tr.GaussianBlur(kernel_size=(3, 3)),
+    #               tr.RandomRotation(degrees=(0, 10))
+    #               ]
+
+    # create a specical augmentation that samples 2 augmentations to apply instead of applying each at once 
+    final_augs.append(tr.Lambda(lambda x: sample_from_random_augmentations(augs=augs, sample=x, max_augs_per_sample=2)))
+
+    train_ds = torchvision.datasets.Flowers102(root=train_dir, 
+                                            split="test", 
+                                            transform=tr.Compose(final_augs), 
+                                            download=True) 
+
+    return train_ds
+
+def load_non_train_data(parent_dir: Union[str, Path]):
+    val, test = [os.path.join(parent_dir, s) for s in ["val", "test"]]
+
+    augs = [tr.ToTensor(), tr.Resize((200, 200))]
+
+    val_ds = torchvision.datasets.Flowers102(root=val, 
+                                            split="val", 
                                             transform=tr.Compose(augs), 
                                             download=True) 
-                for s, d in zip(splits, [train, val, test])]
 
+    test_ds = torchvision.datasets.Flowers102(root=test, 
+                                            split="train", 
+                                            transform=tr.Compose(augs), 
+                                            download=True) 
+
+    return val_ds, test_ds
+
+def load_data(parent_dir: Union[str, Path], augs: List):
+    train_ds = load_train_data(parent_dir=parent_dir, augs=augs)
+    val_ds, test_ds = load_non_train_data(parent_dir)
+    return train_ds, val_ds, test_ds
 
 def set_warmup_epochs(optimizer: Optimizer,
                     main_lr_scheduler: LRScheduler, 

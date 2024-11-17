@@ -119,7 +119,7 @@ if __name__ == '__main__':
     # add mini-max scaling 
     train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.ToTensor(), # convert to a tensor 
                                                                     tr.Resize(size=(200, 200)), # resize to the same input shape
-                                                                    tr.Lambda(lambda x: x / 255.0) 
+                                                                    # tr.Lambda(lambda x: x / 255.0) 
                                                                     ]) 
 
 
@@ -129,9 +129,9 @@ if __name__ == '__main__':
     train_model(
             train_ds, 
             val_ds, 
-            train_batch_size=32, 
-            test_batch_size=32,
-            model_name="baseline_cnn",
+            train_batch_size=256, 
+            test_batch_size=512,
+            model_name="improved_cnn",
             net = cnn, 
             optimizer=optimizer,
             learning_scheduler=lr_scheduler,

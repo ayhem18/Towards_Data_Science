@@ -70,7 +70,7 @@ if __name__ == '__main__':
     # add mini-max scaling 
     train_ds, val_ds, test_ds = load_data(parent_dir=DATA_FOLDER, augs=[tr.ToTensor(), # convert to a tensor 
                                                                         tr.Resize(size=(200, 200)), # resize to the same input shape
-                                                                        tr.Lambda(lambda x: x / 255.0) # min
+                                                                        # tr.Lambda(lambda x: x / 255.0) # min
                                                                         ]) 
 
     optimizer = SGD(params=bcnn.parameters(), lr=0.001,)
@@ -86,7 +86,7 @@ if __name__ == '__main__':
             learning_scheduler=None, # no learning rate scheduling
             num_epochs=10, 
             num_warmup_epochs=None, # no warmup epochs 
-            save_model_path=os.path.join(DATA_FOLDER, 'models', 'cnn'),
+            save_model_path=os.path.join(DATA_FOLDER, 'models', 'baseline_cnn'),
             )
 
 
