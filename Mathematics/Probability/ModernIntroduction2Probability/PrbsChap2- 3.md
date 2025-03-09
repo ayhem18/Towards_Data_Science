@@ -112,4 +112,151 @@ The answer can be verified in the book.
 
 # Chapter 3
 
+## Exercice 3.2
+
+A fair die is thrown twice. A is the event "sum of the throws equals 4," B is "at least one of the throws is a 3."
+
+a. Calculate P(A | B).
+
+b. Are A and B independent events? 
+
+P(A | B) = P(A ∩ B) / P(B) 
+
+$$ P(B) = 1 - P(B ^ c) = 1 - (\frac{5}{6} \times \frac{5}{6}) = \frac{11}{36} $$
+
+$$ P(A \cap B) = \frac{2}{36} = \frac{1}{18} $$
+
+$$ P(A | B) = \frac{P(A \cap B)}{P(B)} = \frac{\frac{1}{18}}{\frac{11}{36}} = \frac{2}{11} $$
+
+$$P(A | B) = \frac{2}{11}$$
+
+b. Are A and B independent events? 
+
+
+$$ P(A) = \frac{3}{36} = \frac{1}{12} $$ 
+
+$$ P(A) \neq P(A | B) $$
+
+Therefore, A and B are not independent events.
+
+## Exercice 3.3
+
+A Dutch cow is tested for BSE, using Test A as described in Section 3.3,
+with $P(T | B)=0.70$ and $P(T | B^c)=0.10$. 
+
+Assume that the BSE risk for the Netherlands is the same as in 2003, when it was estimated to be $P(B) = 1.3 \cdot 10^{-5}$. 
+
+Compute $P(B | T)$ and $P(B | T^c)$ 
+
+Using Bayes' theorem and the law of total probability, we can compute the following:
+
+$$P(B | T) = \frac{P(T | B)P(B)}{P(T)}$$
+
+$$P(T) = P(B \cap T) + P(B^c \cap T)$$
+
+all the values to compute $P(B | T)$ are given in the question.
+
+# Exercice 3.7
+
+Calculate:
+
+a. P(A ∪ B) if it is given that P(A)=1/3 and P(B | A^c)=1/4.
+
+Using conditional probability and set theory principles:
+
+First, we can express the intersection of B and A^c using conditional probability:
+$$P(B \cap A^c) = P(B | A^c) \cdot P(A^c)$$
+
+Since $P(A^c) = 1 - P(A)$, we have:
+$$P(B \cap A^c) = P(B | A^c) \cdot (1 - P(A))$$
+
+Now, we can decompose $P(A \cup B)$ into disjoint events:
+$$P(A \cup B) = P(A) + P(B \cap A^c)$$
+
+Substituting our expression:
+$$P(A \cup B) = P(A) + P(B | A^c) \cdot (1 - P(A))$$
+
+Using the given values $P(A) = \frac{1}{3}$ and $P(B | A^c) = \frac{1}{4}$:
+
+Therefore, $P(A \cup B) = \frac{1}{2}$.
+
+b. $P(B)$ if it is given that $P(A \cup B) = \frac{2}{3}$ and $P(A^c | B^c) = \frac{1}{2}$
+
+First, we note that:
+$$P(A^c \cap B^c) = P((A \cup B)^c) = 1 - P(A \cup B)$$
+
+From the conditional probability formula:
+$$P(A^c | B^c) = \frac{P(A^c \cap B^c)}{P(B^c)}$$
+
+Rearranging to solve for $P(B^c)$:
+$$P(B^c) = \frac{P(A^c \cap B^c)}{P(A^c | B^c)} = \frac{1 - P(A \cup B)}{P(A^c | B^c)}$$
+
+Finally, we can find $P(B)$ using the complement rule:
+$$P(B) = 1 - P(B^c) = 1 - \frac{1 - P(A \cup B)}{P(A^c | B^c)}$$
+
+Substituting the given values $P(A \cup B) = \frac{2}{3}$ and $P(A^c | B^c) = \frac{1}{2}$:
+$$P(B) = 1 - \frac{1 - \frac{2}{3}}{\frac{1}{2}} = 1 - \frac{\frac{1}{3}}{\frac{1}{2}} = 1 - \frac{2}{3} = \frac{1}{3}$$
+
+Therefore, $P(B) = \frac{1}{3}$.
+
+
+## Exerice 3.9 
+
+A certain grapefruit variety is grown in two regions in southern Spain.
+Both areas get infested from time to time with parasites that damage the
+crop. Let A be the event that region R1 is infested with parasites and B that
+region R2 is infested. Suppose $P(A) = \frac{3}{4}$, $P(B) = \frac{2}{5}$ and $P(A \cup B) = \frac{4}{5}$.
+If the food inspection detects the parasite in a ship carrying grapefruits from
+R1, what is the probability region R2 is infested as well? 
+
+We are asked to find $P(B | A)$, the probability that region R2 is infested given that region R1 is infested.
+
+Using the conditional probability formula:
+$$P(B | A) = \frac{P(A \cap B)}{P(A)}$$
+
+To find $P(A \cap B)$, we can use the set theory formula for the union of two events:
+$$P(A \cup B) = P(A) + P(B) - P(A \cap B)$$
+
+Rearranging to isolate $P(A \cap B)$:
+$$P(A \cap B) = P(A) + P(B) - P(A \cup B)$$
+
+Substituting this into our conditional probability formula:
+$$P(B | A) = \frac{P(A) + P(B) - P(A \cup B)}{P(A)}$$
+
+$$P(B | A) = \frac{7}{15}$$
+
+Therefore, the probability that region R2 is infested given that region R1 is infested is $\frac{7}{15}$.
+
+
+# Exercice 3.12
+
+The events A, B, and C satisfy: $P(A | B \cap C) = \frac{1}{4}$, $P(B | C) = \frac{1}{3}$,
+and $P(C) = \frac{1}{2}$. Calculate $P(A^c \cap B \cap C)$ 
+
+To solve this problem, I'll follow these steps:
+
+1. First, note that $P(A^c \cap B \cap C) = P(B \cap C) - P(A \cap B \cap C)$
+
+2. Calculate $P(A \cap B \cap C)$ using the chain rule of conditional probabilities:
+   $$P(A \cap B \cap C) = P(A | B \cap C) \cdot P(B \cap C)$$
+
+3. Calculate $P(B \cap C)$ using conditional probability:
+   $$P(B \cap C) = P(B | C) \cdot P(C)$$
+
+Substituting step 3 into step 2:
+$$P(A \cap B \cap C) = P(A | B \cap C) \cdot P(B | C) \cdot P(C)$$
+
+Now I can calculate both parts using the given values:
+
+$$P(B \cap C) = P(B | C) \cdot P(C) = \frac{1}{3} \cdot \frac{1}{2} = \frac{1}{6}$$
+
+$$P(A \cap B \cap C) = P(A | B \cap C) \cdot P(B | C) \cdot P(C) = \frac{1}{4} \cdot \frac{1}{3} \cdot \frac{1}{2} = \frac{1}{24}$$
+
+Finally, using step 1:
+$$P(A^c \cap B \cap C) = P(B \cap C) - P(A \cap B \cap C) = \frac{1}{6} - \frac{1}{24} = \frac{4}{24} - \frac{1}{24} = \frac{3}{24} = \frac{1}{8}$$
+
+Therefore, $P(A^c \cap B \cap C) = \frac{1}{8}$.
+
+
+
 
