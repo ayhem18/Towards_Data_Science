@@ -38,6 +38,7 @@ $$P((E^c \cap F^c)) = P((E \cup F)^c) = 1 - P(E \cup F) = 1 - \frac{3}{4} = \fra
 ## Exercice 2.4
 Using a ven diagram, the answer is clearly yes.
 
+
 ## Exercice 2.8
 The question is about estimating the probability of the union of two events.
 
