@@ -258,6 +258,125 @@ $$
 This completes the proof.
 
 
+# Problem 17
+A batch of one hundred items is inspected by testing four randomly selected items. If one of the four is defective, the batch is rejected. What is the probability that the batch is accepted if it contains five defectives?
+
+- the probability of a batch with 5 defective items being accepted is the same the probability of drawing 4 times from a batch with 100 items and none of the them being defective.
+
+$$
+I = \frac{number ~ of ~ ways ~ to ~ draw ~ 4 ~ out ~ of ~ 95 ~ items}{number ~ of ~ ways ~ to ~ draw ~ 4 ~ out ~ of ~ 100 ~ items}
+
+= \frac{95!}{4!(95-4)!} / \frac{100!}{4!(100-4)!}
+
+= \frac{95}{100} \cdot \frac{94}{99} \cdot \frac{93}{98} \cdot \frac{92}{97} \cdot \frac{91}{96} 
+$$
+
+
+# Problem 19
+
+Alice searches for her term paper in her filing cabinet. which has several drawers. She knows that she left her term paper in drawer $j$ with probability $p_j > 0$. 
+
+The drawers are so messy that even if she correctly guesses that the term paper is in drawer $i$, the probability that she finds it is only $d_i$. 
+
+Alice searches in a particular drawer, say drawer $i$, but the search is unsuccessful. Conditioned on this event, show that the probability that her paper is in drawer $j$, is given by
+
+
+$$
+\frac{p_j}{1 - p_i \cdot d_i} \quad \text{if} \quad i \neq j  \quad \text{and} \quad \frac{p_i \cdot (1 - d_i)}{1 - p_i \cdot d_i} \quad \text{if} \quad i = j
+$$
+
+
+Let's define the following events: 
+
+- $D_i$ the event that the term paper is in drawer $i$ 
+- $F_i$ the event that the search in drawer $i$ is successful
+
+We know that:
+
+$$P(F_i | D_i) = d_i \quad \text{and} \quad P(D_i) = p_i$$
+
+
+
+
+What we are a looking for is $P(D_j | F_i^c)$ 
+
+$$
+\begin{align*}
+
+P(D_j | F_i^c) &= \frac{P(D_j \cap F_i^c)}{P(F_i^c)} \\
+&= \frac{P(F_i^c|D_i) \cdot P(D_i)}{P(F_i^c)} \\
+&= \frac{P(F_i^c|D_i) \cdot P(D_i)}{P(F_i^c | D_i) \cdot P(D_i) + P(F_i^c | D_i^c) \cdot P(D_i^c)} \\
+\text{using $P(F_i^c | D_i) = 1 - d_i$ and $P(F_i^c | D_i^c) = 1$} \\
+
+&= \frac{p_i \cdot (1 - d_i)}{p_i \cdot (1 - d_i) + (1 - p_i)} \\
+&= \frac{p_i \cdot (1 - d_i)}{1 - d_i \cdot p_i}
+\end{align*}
+$$
+
+
+The other case when $i \neq j$ is straightforward given the explanation above.
+
+# Problem 22
+
+Each of k jars contains m white and n black balls. A ball is randomly chosen from jar 1 and transferred to jar 2, then a ball is randomly chosen from jar 2 and transferred to jar 3, etc. Finally, a ball is randomly chosen from jar k. Show that the probability that the last ball is white is the same as the probability that the first ball is white, i.e. , it is m/(m + n) .
+
+
+- The main idea of the solution is to prove the result above for $ k = 2$. Let's define the following entities. $P(w = 1)$ as the probability that the first ball is white. $P(b = 1)$ as the probability that the first ball is black. $P(w = 2)$ as the probability that the second ball is white. $P(b = 2)$ as the probability that the second ball is white. 
+
+we know that: 
+
+$$ 
+P(w = 1) = \frac{m}{m+n} \quad \text{and} \quad P(b = 1) = \frac{n}{m+n}
+$$
+
+$$
+\begin{align*}
+P(w = 2) &= P(w = 2 ~ \& ~  w = 1) + P(w = 2 ~\& ~b = 1) \\
+&= P(w = 2 | w = 1) \cdot P(w = 1) + P(w = 2 | b = 1) \cdot P(b = 1) \\
+&= \frac{m+1}{m+n+1} \cdot \frac{m}{m+n} + \frac{m}{m+n+1} \cdot \frac{n}{m+n} \\
+&= \frac{m(m+1) + mn}{(m+n)(m+n+1)} \\
+&= \frac{m}{m+n}
+\end{align*}
+$$
+
+So basically the probability of drawing a white ball from the second jar is the same as the probability of drawing a white ball from the first jar and it hence will not change for any number of jars $k$.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+$$
+$$
+
+
+
+
+
+
+
 
 
  

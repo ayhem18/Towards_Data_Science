@@ -1,0 +1,106 @@
+# Overview
+
+This is my attempt to solve the most interesting Random Variables problems from the book "Modern Introduction to Probability" by Dimitri P. Bertsekas and John N. Tsitsiklis.
+
+
+# Chapter 4: Discrete Random Variables
+
+## Problem 4.6
+
+
+Three times we randomly draw a number from the following numbers:
+123.
+If $X_i$ represents the ith draw, $i = 1, 2, 3$, then the probability mass function
+of $X_i$ is given by
+a 123
+$$
+P(X_i = a) = \frac{1}{3} \quad \text{for} \quad a = 1, 2, 3
+$$
+
+and $P(X_i = a) = 0 $ for all other $a$. 
+
+We assume that each draw is independent of the previous draws. Let $X$ be the average of $X_1, X_2, X_3$, i.e.,
+
+$$X = \frac{X_1 + X_2 + X_3}{3}$$
+
+
+a. determine the probability mass function of $X$ 
+
+b. compute the probability that exactly 2 draws are equal to 1.
+
+
+a. it is mainly about enumerating all $3^3 = 27$ possible outcomes and counting the number of outcomes for each value of $X$. 
+
+b. we are supposed to compute $P(Y = 2)$ where $Y$ is the number of times the number 1 is drawn. $ Y \approx Bernoulli(p = \frac{1}{3}, n = 3)$ 
+
+
+## Problem 4.11
+
+You decide to play monthly in two different lotteries, and you stop playing as soon as you win a prize in one (or both) lotteries of at least one million euros. Suppose that every time you participate in these lotteries, the probability to win one million (or more) euros is $p_1$ for one of the lotteries and $p_2$ for the other. Let $M$ be the number of times you participate in these lotteries until winning at least one prize. What kind of distribution does $M$ have, and what is its parameter?
+
+
+- The distribution is geometric with parameter $p = 1 - (1 - p_1)(1 - p_2) = p_1 + p_2 - p_1p_2$
+
+
+## Problem 4.12
+
+You and a friend want to go to a concert, but unfortunately only one ticket is still available. The man who sells the tickets decides to toss a coin until heads appears. In each toss heads appears with probability $p$, where $0 <p< 1$, independent of each of the previous tosses. If the number of tosses needed is odd, your friend is allowed to buy the ticket; otherwise you can buy it. Would you agree to this arrangement?
+
+let $X$ be the number of tosses needed to get heads. $X \approx Geometric(p)$ 
+
+$$
+\begin{align*}
+P(X ~ \text{odd}) &= \sum_{k=0}^{\infty} P(X = 2k+1) \\
+&= \sum_{k=0}^{\infty} (1-p)^{2k}p \\
+&= p \sum_{k=0}^{\infty} (1-p)^{2k} \\
+&= p \frac{1}{1-(1-p)^2} \\
+&= \frac{1}{2-p}
+\end{align*}
+$$
+
+Since $p > 0$ we have $P(X ~ \text{odd}) > \frac{1}{2}$. Hence I would not agree to this arrangement. 
+
+
+## Problem 4.14
+
+We throw a coin until a head turns up for the second time, where p is the
+probability that a throw results in a head and we assume that the outcome
+of each throw is independent of the previous outcomes. Let X be the number
+of times we have thrown the coin. 
+
+b. find $P(x = n)$ for $n \geq 2$ 
+
+
+for a given $n$, we have a sample space where $n - 1$ coins are tossed
+and a sample space where only one coin is tossed (the last coin). 
+
+
+$$
+\begin{align*}
+P(X = n) &= P(\text{head in the last toss}) \times P(n - 1 ~ \text{tosses are tails}) \\
+&= p \times \binom{n-1}{1} \times (1-p)^{n-2} \cdot p\\
+&= (n - 1) \cdot p^2 (1-p)^{n-2}
+\end{align*}
+$$
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
