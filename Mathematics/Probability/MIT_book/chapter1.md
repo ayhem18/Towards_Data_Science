@@ -347,38 +347,6 @@ So basically the probability of drawing a white ball from the second jar is the 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-$$
-$$
-
-
-
-
-
-
-
-
-
  
 
 
