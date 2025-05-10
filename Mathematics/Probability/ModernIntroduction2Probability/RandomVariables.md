@@ -85,15 +85,107 @@ $$
 
 
 
+# Chapter 5: Continuous Random Variables
+
+The most interesting problem in this chapter is 5.5
+
+![](image.png)
+
+1. Compute $F(-2)$ in terms of $c$
+2. prove that $F(t) = F(-2)$ for all $-3 \leq t \leq -2$
+3. prove that $F(t) = 1$ for $t \geq 3$
+4. compute $F(3) - F(2)$ using integration and $F(3) - F(2) = 1 - F(2)$
+5. find $c$
 
 
- 
+- Step1:
+
+$$
+\begin{align*}
+F(-2) &= P(X \leq -2) \\
+&= \int_{-\infty}^{-2} c \cdot x + 3 \, dx \\
+&= 3 - \frac{c}{2} 
+\end{align*}
+$$
+
+- Step2:
+
+Since $f(x) = 0$ for $ x \in [-2, 2]$, then $F(t) = F(-2)$ for all $-2 \leq t \leq 2$
+
+
+-Step 3:
+
+$$
+\begin{align*}
+1 &= \int_{-\infty}^{\infty} f(x) \, dx \\
+&= \int_{-\infty}^{3} f(x) \, dx
++ \int_{3}^{\infty} f(x) \, dx \\
+&= F(3) + 0 \\ 
+&\implies F(3) = 1
+\end{align*}
+$$
+
+- Step4:
+
+$$
+\begin{align*}
+F(3) - F(2) &= \int_{2}^{3} f(x) \, dx \\
+&= \int_{2}^{3} c \cdot x + 3 \, dx \\
+&= 3 - \frac{c}{2} 
+\end{align*}
+$$
+
+
+also 
+
+$$
+\begin{align*}
+F(3) - F(2) &= 1 - F(2) \\
+&= 1 - (3 - \frac{c}{2}) \\
+&= -2 + \frac{c}{2}
+\end{align*}
+$$
+
+
+- Step5:
+
+$$
+\begin{align*}
+-2 + \frac{c}{2} &= 3 - \frac{c}{2} \\
+&\implies c = 5
+\end{align*}
+$$
+
+
+the answer can be verified in the book (answers to selected problems part)
+
+
+## Problem 5.11
+
+Compute the median of an $Exp(\lambda)$ random variable. 
+
+The idea is to find the value $m$ such that $P(X \leq m) = 0.5$
+
+$$
+\begin{align*}
+P(X \leq m) &= \int_{0}^{m} \lambda e^{-\lambda x} \, dx \\
+&= 1 - e^{-\lambda m}
+\end{align*}
+$$
+
+
+$$
+\begin{align*}
+1 - e^{-\lambda m} &= 0.5 \\
+&\implies e^{-\lambda m} = 0.5 \\
+&\implies -\lambda m = \ln(0.5) \\
+&\implies m = \frac{\ln(2)}{\lambda}
+\end{align*}
+$$
 
 
 
-
-
-
+# Chapter 7: Expectation and Variance
 
 
 

@@ -71,9 +71,6 @@ $p = \frac{-1 - \sqrt{5}}{2} \approx -1.618$
 
 Since p represents a probability, it must be between 0 and 1. Therefore, the only valid solution is:
 $$p = \frac{-1 + \sqrt{5}}{2} \approx 0.618$$
-We can verify this answer by checking that $p + p^2 = 1$:
-If $p = \frac{-1 + \sqrt{5}}{2}$, then $p^2 = \frac{3 - \sqrt{5}}{2}$
-$p + p^2 = \frac{-1 + \sqrt{5}}{2} + \frac{3 - \sqrt{5}}{2} = \frac{2}{2} = 1$ ✓
 
 
 ## Exercice 2.16
@@ -98,8 +95,13 @@ Now, to find P(E):
 $$P(E) = P(E \cap \Omega) = P(E \cap ((E \cap F) \cup (F \cap G) \cup (E \cap G)))$$
 
 Applying the distributive property:
-$$P(E) = P((E \cap (E \cap F)) \cup (E \cap (F \cap G)) \cup (E \cap (E \cap G)))$$
-     = P((E \cap F) \cup (E \cap F \cap G) \cup (E \cap G))$$
+
+$$ 
+\begin{align*}
+P(E) &= P(E \cap ((E \cap F) \cup (F \cap G) \cup (E \cap G))) \\
+     &= P((E \cap (E \cap F)) \cup (E \cap (F \cap G)) \cup (E \cap (E \cap G)))
+\end{align*}
+$$ 
 
 Since P(E ∩ F ∩ G) = 0:
 $$P(E) = P((E \cap F) \cup (E \cap G))$$

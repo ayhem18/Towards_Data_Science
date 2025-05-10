@@ -6,7 +6,12 @@ This is my attempt to solve problems from the book "Introduction to Analysis" by
 
 ## Exercice 1.2
 
-For each of the \( a_n \) below, determine if the sequence \(\{a_n\}, n \geq 1\), is increasing (strictly?), decreasing (strictly?), or neither. Show reasoning.
+For each of the \( a_n \) below, determine if the sequence 
+$$
+a_n, n \geq 1
+$$
+
+is increasing (strictly?), decreasing (strictly?), or neither. Show reasoning.
 
 
 $$
