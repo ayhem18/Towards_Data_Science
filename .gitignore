@@ -28,8 +28,9 @@ Programming_Tools/Pytorch/data
 DataEngineering/BigData_Uni_course/assignments/a3/JIRA
 # ignore any file with the name runs
 runs
-*.png
-!My_Research/images/*.png
+# *.png
+# !My_Research/images/*.png
+
 extra_env
 *.csv
 *.json
@@ -37,6 +38,7 @@ extra_env
 *.txt
 *.tsv
 *.jpg
+
 signal_processing/uni_course/assignment_4/a4
 github_config.py
 github_config.ini

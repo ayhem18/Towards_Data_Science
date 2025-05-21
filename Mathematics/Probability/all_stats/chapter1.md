@@ -10,8 +10,6 @@ The book does an amazing job covering powerful and useful concepts in probabilit
 ![](images/chapter1/img1.png)
 
 
-// ... existing code ...
-
 ## Problem 3
 
 Let $\Omega$ be a sample space and let $A_1, A_2, \ldots$, be events. Define $B_n = \bigcup_{i=n}^{\infty} A_i$ and $C_n = \bigcap_{i=n}^{\infty} A_i$.
@@ -75,7 +73,7 @@ Consider $B_{N+1} = \bigcup_{i=N+1}^{\infty} A_i$. Since $\omega \notin A_i$ for
 
 $(\Leftarrow)$ Suppose $\omega$ belongs to infinitely many events $A_i$. Then for any $n \geq 1$, there exists some $N \geq n$ such that $\omega \in A_N$. Since $A_N \subset B_n$ (as $N \geq n$), we have $\omega \in B_n$ for all $n \geq 1$. Therefore, $\omega \in \bigcap_{n=1}^{\infty} B_n$.
 
-## (c) Show that $\omega \in \bigcup_{n=1}^{\infty} C_n$ if and only if $\omega$ belongs to all the events $A_1, A_2, \ldots$ except possibly a finite number of those events.
+### (c) Show that $\omega \in \bigcup_{n=1}^{\infty} C_n$ if and only if $\omega$ belongs to all the events $A_1, A_2, \ldots$ except possibly a finite number of those events.
 
 **Proof:**
 
@@ -83,8 +81,6 @@ $(\Rightarrow)$ Suppose $\omega \in \bigcup_{n=1}^{\infty} C_n$. Then there exis
 
 $(\Leftarrow)$ Suppose $\omega$ belongs to all events $A_i$ except possibly a finite number of them. Then there exists some integer $k$ such that $\omega \in A_i$ for all $i \geq k$. This means $\omega \in \bigcap_{i=k}^{\infty} A_i = C_k$. Therefore, $\omega \in \bigcup_{n=1}^{\infty} C_n$.
 
-
-// ... existing code ...
 
 # Problem 4
 
@@ -225,25 +221,17 @@ Suppose that $A$ and $B$ are independent events. Show that $A^c$ and $B^c$ are i
 
 For two events to be independent, we need to show that $\mathbb{P}(A^c \cap B^c) = \mathbb{P}(A^c) \cdot \mathbb{P}(B^c)$.
 
-First, we know:
-- $\mathbb{P}(A^c) = 1 - \mathbb{P}(A)$
-- $\mathbb{P}(B^c) = 1 - \mathbb{P}(B)$
 
-So:
-$$\mathbb{P}(A^c) \cdot \mathbb{P}(B^c) = (1 - \mathbb{P}(A)) \cdot (1 - \mathbb{P}(B))$$
-$$= 1 - \mathbb{P}(A) - \mathbb{P}(B) + \mathbb{P}(A) \cdot \mathbb{P}(B)$$
+$$
+\begin{align*}
+\mathbb{P}(A^c) \cdot \mathbb{P}(B^c) &= (1 - \mathbb{P}(A)) \cdot (1 - \mathbb{P}(B)) \\
+&= 1 - \mathbb{P}(A) - \mathbb{P}(B) + \mathbb{P}(A) \cdot \mathbb{P}(B) \\
+&= 1 - (P(A) + P(B) - P(A \cap B)) \\ 
+&= 1 - (P(A \cup B))\\
+&= P((A \cup B)^c) \\
+&= \mathbb{P}(A^c \cap B^c)
+\end{align*}
+$$
 
-Next, we can find $\mathbb{P}(A^c \cap B^c)$. Using set theory, $A^c \cap B^c = (A \cup B)^c$. Therefore:
-$$\mathbb{P}(A^c \cap B^c) = \mathbb{P}((A \cup B)^c) = 1 - \mathbb{P}(A \cup B)$$
+Hence the result.
 
-For the union of events:
-$$\mathbb{P}(A \cup B) = \mathbb{P}(A) + \mathbb{P}(B) - \mathbb{P}(A \cap B)$$
-
-Since $A$ and $B$ are independent, $\mathbb{P}(A \cap B) = \mathbb{P}(A) \cdot \mathbb{P}(B)$. Therefore:
-$$\mathbb{P}(A \cup B) = \mathbb{P}(A) + \mathbb{P}(B) - \mathbb{P}(A) \cdot \mathbb{P}(B)$$
-
-Substituting back:
-$$\mathbb{P}(A^c \cap B^c) = 1 - [\mathbb{P}(A) + \mathbb{P}(B) - \mathbb{P}(A) \cdot \mathbb{P}(B)]$$
-$$= 1 - \mathbb{P}(A) - \mathbb{P}(B) + \mathbb{P}(A) \cdot \mathbb{P}(B)$$
-
-Since $\mathbb{P}(A^c \cap B^c) = \mathbb{P}(A^c) \cdot \mathbb{P}(B^c)$, we have shown that $A^c$ and $B^c$ are independent events.
