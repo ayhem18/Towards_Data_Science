@@ -141,3 +141,189 @@ $$
 
 which means that for any vector $v \in F$, there exists a vector $(-1) \cdot v \in F$ such $v +  (-1) \cdot v = 0$
 
+### Problem 6
+
+![](images/img2.png)
+
+
+We need to prove that $S = R \cup (\infty, \infty)$ is a vector space over $R$.
+
+Let's start with the axioms of a vector space: (I am trying to chunk the axioms)
+
+1. pure vector space axioms: 
+    
+    - commutativity of addition
+
+    $$
+    \begin{align*}
+    v + w &= w + v && \text{for any $v, w \in \mathbb{R}$} \\
+    (\infty + v) &= (v + \infty) = \infty && \text{for any $v\in \mathbb{R}$} \\
+    (-\infty + v) &= (v + (-\infty)) = -\infty && \text{for any $v\in \mathbb{R}$} \\
+    (\infty + (-\infty)) &= ((-\infty) + \infty) = 0 &&\text{given} \\
+    (\infty + \infty) &= (\infty + \infty) = \infty &&\text{given} \\
+    (-\infty + (-\infty)) &= (-\infty + (-\infty)) = -\infty &&\text{given} \\
+    \end{align*}
+    $$
+
+    - associativity of addition: tedious but straightforward (using the number of infinity values in the expression)
+
+    -  existence of an additive identity
+        
+    $$
+    \begin{align*}
+    0 + v &= v && \text{for any $v \in \mathbb{R}$} \\ 
+    0 + (\infty) &= (\infty) && \text{given} \\
+    0 + (-\infty) &= (-\infty) && \text{given} \\
+    \implies 0 + v &= v \text{ for any } v \in S
+    \end{align*}
+    $$
+
+    ==> additive identity is satisfied
+
+    -  existence of an additive inverse
+
+    $$
+    \begin{align*}
+    v + (-v) &= 0 && \text{for any $v \in \mathbb{R}$} \\
+    (\infty + (-\infty)) &= 0 && \text{given} \\
+    \implies & \forall v \in S, \exists -v \in S \text{ such that } v + (-v) = 0
+    \end{align*}
+    $$
+
+    ==> additive inverse is satisfied
+    
+    
+    - addition of two vectors in $S$ is a vector in $S$ 
+
+    $$
+    \begin{align*}
+    v + w &= v + w && \text{for any $v, w \in \mathbb{R}$} \\
+    (\infty + v) &= \infty && \text{for any $v\in \mathbb{R}$} \\
+    (-\infty + v) &= -\infty && \text{for any $v\in \mathbb{R}$} \\
+    (\infty + (-\infty)) &= 0 && \text{given} \\
+    (\infty + (\infty)) &= \infty && \text{given} \\
+    (-\infty + (-\infty)) &= (-\infty) && \text{given} \\
+    \implies & x + y \in S \text{ for any } x, y \in S
+    \end{align*}
+    $$
+
+    ==> addition of two vectors in $S$ is a vector in $S$ satisfied
+
+
+2. scalar multiplication axioms:
+
+    - commutativity of scalar multiplication: $(a \cdot b) \cdot v = a \cdot (b \cdot v)$
+
+    since this property is true for real numbers, we need to prove it for $\infty$ and $-\infty$
+
+    $$
+    \begin{align*}
+    a \cdot b &\neq 0 \\ 
+
+    a \cdot b \cdot (\infty) = sign(a) \cdot (sign(b) \cdot \infty) &= (sign(a) \cdot sign(b)) \cdot \infty \\
+
+    a \cdot b \cdot (-\infty) = sign(a) \cdot (sign(b) \cdot (-\infty)) &= (sign(a) \cdot sign(b)) \cdot (-\infty) \\
+
+    \text{since ~~} 0 \cdot \infty = 0 \cdot (-\infty) = 0
+
+    a \cdot b = 0 &\implies (a \cdot b) \cdot \infty = a \cdot (b \cdot \infty) = 0 \\
+    \end{align*}
+    $$
+
+
+    - associativity of scalar multiplication
+
+
+I just gave up on the rest of the axioms cause they are too tedious to verify...
+
+
+### Problem 7 
+
+![](images/img3.png)
+
+- addition: 
+
+Given 2 functions $f: S \rightarrow V$ and $g: S \rightarrow V$, define $(f + g): S \rightarrow V$ by $$(f + g)(s) = f(s) + g(s)$$
+
+- multiplication: Let $a \in F$ and $f: S \rightarrow V$ be a function. Define $(a \cdot f): S \rightarrow V$ by $$(a \cdot f)(s) = a \cdot f(s)$$
+
+
+Let's go through the axioms one by one:
+
+1. pure vector space axioms:
+
+    - commutativity of addition: 
+
+        for any $s \in S$, $f(s) \in V$ and $g(s) \in V$
+            
+        which implies that $$(f + g)(s) = f(s) + g(s) = g(s) + f(s) = (g + f)(s)$$ 
+
+        ==> commutativity of addition is satisfied
+
+    - associativity of addition: 
+    
+        let $f_1, f_2, f_3 \in V^S$, for any $s \in S$, we have:
+
+        $$
+        \begin{align*}
+        ((f_1 + f_2) + f_3)(s) &= (f_1 + f_2)(s) + f_3(s) \\
+        &= f_1(s) + (f_2(s) + f_3(s)) && \text{since $f_i(s) 
+        \in V$}\\
+        \end{align*}
+        $$
+
+        ==> associativity of addition is satisfied
+
+
+    - addition of two functions in $V^S$ is a function in $V^S$ 
+
+
+    - existince of additive identity: 
+
+        define the function $f: S \rightarrow V$ by $f(s) = 0$ for any $s \in S$ 
+
+        for any function $g \in V^S$, we have:
+
+        $$
+        \begin{align*}
+        (f + g)(s) &= f(s) + g(s) \\
+        &= 0 + g(s) \\
+        &= g(s) \\
+        \implies & f + g = g \text{ for any } g \in V^S
+        \end{align*}
+        $$
+
+        ==> existince of additive identity is satisfied
+
+    - existince of additive inverse: 
+
+        for a given function $g \in V^S$, define the function $f: S \rightarrow V$ by $f(s) = -g(s)$ for any $s \in S$ 
+
+        $$ 
+        \begin{align*}
+        (f + g)(s) &= f(s) + g(s) \\
+        &= -g(s) + g(s) \\
+        &= 0 \\
+        \implies & f + g = 0 \text{ for any } g \in V^S
+        \end{align*}
+        $$
+
+        ==> existince of additive inverse is satisfied
+
+
+2. scalar multiplication axioms:
+
+    - multiplication of a scalar and a function in $V^S$ is a function in $V^S$  
+
+    - the other axioms are too tedious to verify... 
+
+
+
+
+
+
+
+
+
+
+
