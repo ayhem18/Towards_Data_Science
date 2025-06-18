@@ -9,7 +9,7 @@
 
 - $0$ does not belong to $b$ => $b$ is not a subspace of $R^3$
 
-- $a_1 = (1, 0, 0) \in c$ and $a_2 = (0, 1, 1) \in c$ are in $c$ => $a_1 + a_2 = (1, 1, 1) \notin c$ \implies $c$ is not a subspace.
+- $a_1 = (1, 0, 0) \in c$ and $a_2 = (0, 1, 1) \in c$ are in $c$ => $a_1 + a_2 = (1, 1, 1) \notin c$ $\implies$ $c$ is not a subspace.
 
 - $0 \in d$ $\lambda \cdot x = (\lambda \cdot x_1, \lambda \cdot x_2, \lambda \cdot x_3) \in d$ for any $\lambda \in R$ => $
 
@@ -54,7 +54,7 @@ Linearity of the integral gives
 * if $f,g\in W_0$ then $\int_0^1(f+g)=0+0=0$ so $f+g\in W_0$,
 * for $\lambda\in\mathbb R$, $\int_0^1 \lambda f = \lambda\int_0^1 f = 0$, hence $\lambda f\in W_0$.
 
-Thus $W_0$ is a subspace.  Therefore $W_b$ is a subspace precisely when $b=0$.
+Thus $W_0$ is a subspace.  Therefore $W_b$ is a subspace if and only if $b=0$.
 
 ## Problem 5
 
@@ -70,7 +70,7 @@ and is therefore **not** a subspace of $\mathbb C^2$.
 
 ## Problem 6
 
-(a)  In $\mathbb R$ the equation $a^3=b^3$ implies $a=b$.  Hence
+(a)  In $\mathbb R$ the equation $a^3=b^3$ implies $a=b$ (proof below).  Hence
 
 $$S=\{(a,b,c)\in\mathbb R^3\mid a^3=b^3\}=\{(a,a,c)\mid a,c\in\mathbb R\}.$$
 It is easy to prove that is is indeed a subspace of $\mathbb R^3$. 
@@ -85,6 +85,19 @@ $$T=\{(a,b,c)\in\mathbb C^3\mid a^3=b^3\},$$
 but $u+v=(2,1+\omega,0)$ has first and second components whose cubes differ, so $u+v\notin T$.  Thus 
 
 $T$ is **not** closed under addition and is **not** a subspace of $\mathbb C^3$.
+
+* Note: 
+
+$$
+\begin{align*}
+a^3 &= b^3 \\ 
+\implies (a - b)(a^2 + ab + b^2) &= 0 \\
+a^2 + ab + b^2 &= \frac{1}{2} \cdot (a^2 + b^2 + 2ab) + \frac{1}{2} \cdot (a^2 + b^2) \\
+a^2 + ab + b^2 &= \frac{1}{2} \cdot (a+b)^2 + \frac{1}{2} \cdot (a^2 + b^2) \\
+a^2 + ab + b^2 &= 0 \implies a = b = 0
+\end{align*}
+$$
+
 
 ## Problem 7
 
@@ -138,7 +151,11 @@ A subspace $W$ has an additive inverse $W'$ when $W+W'=V_0$.  This forces every 
 
 and since the additive inverse of a vector is unique, there should be only element in both $W$ and $W'$. 
 
-so $w=0$; hence $W=V_0$ and similarly $W'=V_0$.  Therefore the **only** subspace possessing an additive inverse (and it is its own inverse) is $V_0$.
+so $w=0$; 
+
+hence $W=V_0$ and similarly $W'=V_0$.  
+
+Therefore the **only** subspace possessing an additive inverse (and it is its own inverse) is $V_0$.
 
 ## Problem 19
 
