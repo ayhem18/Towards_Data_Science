@@ -171,7 +171,7 @@ and write $\alpha_i$ in terms of $a_i$, and solve for $\alpha_i = 0$, the result
 
 ## Problem 9
 
-This problem is similar to problem 8.
+This problem is similar to problem 8. if the columns of $V$ are linearly independent, then the columns of $V \cdot A$ are also linearly independent (where $A$ is a reversible matrix).
 
 
 
