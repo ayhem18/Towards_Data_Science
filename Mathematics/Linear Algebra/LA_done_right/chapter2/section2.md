@@ -59,6 +59,25 @@ $$
 
 and hence the result follows.
 
+### Result 3
+if $v_1, v_2, ... v_n$ are linearly independent, and $w \notin \text{span}(v_1, v_2, ... v_n)$, then $v_1, v_2, ... v_n, w$ are linearly independent.
+
+
+$$
+\begin{align*}
+\alpha_1 v_1 + \alpha_2 v_2 + \cdots + \alpha_n v_n + \beta w &= 0 \\
+\implies \alpha_1 v_1 + \alpha_2 v_2 + \cdots + \alpha_n v_n &= - \beta w \\
+\text{if } ~ \beta = 0 ~ \text{then} ~  \alpha_1 v_1 + \alpha_2 v_2 + \cdots + \alpha_n v_n &= 0 \\
+\implies \alpha_i = 0 ~~ \text{since $v_i$ independent}
+
+\text{if } \beta \neq 0 \text{ then } \alpha_i = 0 \text{ for all } i \\
+\implies \alpha_1 v_1 + \alpha_2 v_2 + \cdots + \alpha_n v_n = - \beta w \\
+\implies \alpha_1 v_1 + \alpha_2 v_2 + \cdots + \alpha_n v_n = w \text{ for some } \alpha_i \in \mathbb{F} \\
+\implies w \in \text{span}(v_1, v_2, ... v_n) \text{ (contradiction)} \\
+\end{align*}
+$$
+
+which means that $\alpha_i = 0$  and $\beta = 0$ for all $i$ and hence $v_1, v_2, ... v_n, w$ are linearly independent.
 
 ## Problem 1
 
