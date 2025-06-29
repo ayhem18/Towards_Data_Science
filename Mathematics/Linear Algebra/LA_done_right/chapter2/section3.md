@@ -299,3 +299,195 @@ $$
 
 This completes the argument.
 
+<!-- ![image](./images/img9.png) -->
+
+
+## Problem 15
+
+Let $V$ be a finite-dimensional vector space, and let $V_1, V_2, V_3$ be subspaces of $V$. We are given that $\dim V_1 + \dim V_2 + \dim V_3 > 2 \dim V$. We want to prove that $V_1 \cap V_2 \cap V_3 \neq \{0\}$.
+
+We start with the general dimension formula for the intersection of two subspaces $U$ and $W$ of $V$:
+$$
+\dim(U \cap W) = \dim U + \dim W - \dim(U+W)
+$$
+Since $U+W$ is a subspace of $V$, its dimension is at most $\dim V$. This gives us a useful inequality:
+$$
+\dim(U \cap W) \ge \dim U + \dim W - \dim V \tag{1}
+$$
+
+Now, we apply this inequality twice. First, let $U=V_1$ and $W=V_2$ in equation (1):
+$$
+\dim(V_1 \cap V_2) \ge \dim V_1 + \dim V_2 - \dim V \tag{2}
+$$
+
+Next, we apply equation (1) again with $U = V_1 \cap V_2$ and $W=V_3$:
+$$
+\dim(V_1 \cap V_2 \cap V_3) \ge \dim(V_1 \cap V_2) + \dim V_3 - \dim V
+$$
+Substituting the result from equation (2) into this inequality, we get:
+$$
+\begin{align*}
+\dim(V_1 \cap V_2 \cap V_3) &\ge (\dim V_1 + \dim V_2 - \dim V) + \dim V_3 - \dim V \\
+&= \dim V_1 + \dim V_2 + \dim V_3 - 2 \dim V
+\end{align*}
+$$
+We are given that $\dim V_1 + \dim V_2 + \dim V_3 > 2 \dim V$. Therefore, the right-hand side is strictly positive:
+$$
+\dim(V_1 \cap V_2 \cap V_3) > 0
+$$
+A subspace with a dimension greater than 0 cannot be the zero subspace. Thus, $V_1 \cap V_2 \cap V_3 \neq \{0\}$.
+
+## Problem 16
+
+Let $\dim V = n$ and let $U$ be a subspace of $V$ with $\dim U = m$ and $U \neq V$. We need to find $n-m$ subspaces of $V$, each of dimension $n-1$, whose intersection is $U$.
+
+Let $\{u_1, \dots, u_m\}$ be a basis for $U$. Since $U \neq V$, we can extend this to a basis for $V$: $\{u_1, \dots, u_m, w_1, \dots, w_{n-m}\}$.
+
+For each $i \in \{1, \dots, n-m\}$, define a subspace $X_i$ as follows:
+$$
+X_i = \operatorname{span}(u_1, \dots, u_m, w_1, \dots, w_{i-1}, w_{i+1}, \dots, w_{n-m})
+$$
+The spanning list for $X_i$ consists of $m + (n-m-1) = n-1$ vectors from a basis of $V$, so they are linearly independent. Thus, $\dim X_i = n-1$ for each $i$.
+
+We need to show that $\bigcap_{i=1}^{n-m} X_i = U$.
+
+**1. Show $U \subseteq \bigcap_{i=1}^{n-m} X_i$:**
+
+The basis vectors of $U$, $\{u_1, \dots, u_m\}$, are included in the spanning set for every $X_i$. Therefore, $U \subseteq X_i$ for all $i$, which implies $U \subseteq \bigcap_{i=1}^{n-m} X_i$.
+
+**2. Show $\bigcap_{i=1}^{n-m} X_i \subseteq U$:**
+Let $x \in \bigcap_{i=1}^{n-m} X_i$. Since $x \in V$, it has a unique representation in the basis of $V$:
+$$
+x = \sum_{j=1}^m \alpha_j u_j + \sum_{k=1}^{n-m} \beta_k w_k
+$$
+For $x$ to be in the intersection, it must belong to every subspace $X_i$. Let's focus on a single subspace $X_i$ and show that if $x \in X_i$, its corresponding coefficient $\beta_i$ must be zero.
+
+Let's define a vector $y$ composed of all the terms in the expansion of $x$ that are guaranteed to be in $X_i$:
+$$
+y = \sum_{j=1}^m \alpha_j u_j + \sum_{k=1, k\neq i}^{n-m} \beta_k w_k
+$$
+By construction, every vector in the sums for $y$ is in the spanning set of $X_i$, so $y \in X_i$.
+Since $X_i$ is a subspace and both $x$ and $y$ are in it, their difference must also lie in $X_i$:
+$$
+x - y = \beta_i w_i
+$$
+But by its definition, $X_i = \operatorname{span}(u_1, \dots, u_m, w_1, \dots, w_{i-1}, w_{i+1}, \dots, w_{n-m})$. The vector $w_i$ is linearly independent of the vectors in the basis of $X_i$. The only way a scalar multiple of $w_i$ can be in $X_i$ is if the scalar is zero. Therefore, $\beta_i = 0$.
+
+This logic applies for every $i \in \{1, \dots, n-m\}$. Thus, all coefficients $\beta_1, \dots, \beta_{n-m}$ must be zero, which simplifies the expression for $x$ to:
+$$
+x = \sum_{j=1}^m \alpha_j u_j
+$$
+This means $x \in \operatorname{span}(u_1, \dots, u_m) = U$.
+
+Combining both inclusions, we have $\bigcap_{i=1}^{n-m} X_i = U$.
+
+## Problem 17
+We want to prove by induction that for finite-dimensional subspaces $V_1, \dots, V_m$ of $V$:
+$$
+\dim(V_1 + \dots + V_m) \le \dim V_1 + \dots + \dim V_m
+$$
+
+**Base Case (m=2):**
+For two subspaces, the dimension formula states:
+$$
+\dim(V_1 + V_2) = \dim V_1 + \dim V_2 - \dim(V_1 \cap V_2)
+$$
+Since dimension is always non-negative, $\dim(V_1 \cap V_2) \ge 0$.
+Thus, $\dim(V_1 + V_2) \le \dim V_1 + \dim V_2$. The base case holds.
+
+**Inductive Step:**
+Assume the inequality holds for any $m-1$ subspaces. Let's prove it for $m$.
+Let $W = V_1 + \dots + V_{m-1}$. Then $V_1 + \dots + V_m = W + V_m$.
+Using the base case for the two subspaces $W$ and $V_m$:
+$$
+\dim(W + V_m) \le \dim W + \dim V_m
+$$
+Substituting back $W = V_1 + \dots + V_{m-1}$:
+$$
+\dim(V_1 + \dots + V_m) \le \dim(V_1 + \dots + V_{m-1}) + \dim V_m
+$$
+By the induction hypothesis, $\dim(V_1 + \dots + V_{m-1}) \le \dim V_1 + \dots + \dim V_{m-1}$.
+Applying this to the right side of the inequality:
+$$
+\dim(V_1 + \dots + V_m) \le (\dim V_1 + \dots + \dim V_{m-1}) + \dim V_m
+$$
+This completes the inductive proof.
+
+## Problem 18
+
+Suppose $V$ is finite-dimensional with $\dim V = n \ge 1$. We want to find one-dimensional subspaces $V_1, \dots, V_n$ of $V$ such that $V = V_1 \oplus \dots \oplus V_n$.
+
+Let $\{u_1, \dots, u_n\}$ be a basis of $V$.
+For each $i \in \{1, \dots, n\}$, define the subspace $V_i = \operatorname{span}(u_i)$.
+Since $u_i$ is a basis vector, it is non-zero, so $\dim V_i = 1$.
+
+To show that $V = V_1 \oplus \dots \oplus V_n$, we need to show that the sum is direct. This is equivalent to showing that any vector $v \in V$ can be written as a unique sum $v = v_1 + \dots + v_n$ where each $v_i \in V_i$.
+
+Let $v \in V$. Since $\{u_1, \dots, u_n\}$ is a basis for $V$, there exist unique scalars $\alpha_1, \dots, \alpha_n$ such that:
+$$
+v = \alpha_1 u_1 + \dots + \alpha_n u_n
+$$
+Let $v_i = \alpha_i u_i$. By definition, $v_i \in \operatorname{span}(u_i) = V_i$.
+So, $v = v_1 + \dots + v_n$. The existence of such a sum is proven.
+The uniqueness of the scalars $\alpha_i$ in the basis expansion implies the uniqueness of the vectors $v_i$.
+Therefore, the sum is direct, and $V = V_1 \oplus \dots \oplus V_n$.
+
+## Problem 19
+The proposed formula is:
+$$ \dim(V_1+V_2+V_3) = \dim V_1 + \dim V_2 + \dim V_3 - \dim(V_1 \cap V_2) - \dim(V_1 \cap V_3) - \dim(V_2 \cap V_3) + \dim(V_1 \cap V_2 \cap V_3) $$
+This formula is incorrect. Let's provide a counterexample.
+
+Let $V = \mathbb{R}^2$. Consider three distinct one-dimensional subspaces (lines through the origin):
+- $V_1 = \operatorname{span}((1, 0))$
+- $V_2 = \operatorname{span}((0, 1))$
+- $V_3 = \operatorname{span}((1, 1))$
+
+Let's compute the dimensions for the formula:
+- $\dim V_1 = 1$, $\dim V_2 = 1$, $\dim V_3 = 1$.
+- Any two of these lines only intersect at the origin, so $V_1 \cap V_2 = V_1 \cap V_3 = V_2 \cap V_3 = \{0\}$. Their dimensions are all 0.
+- The intersection of all three is also just $\{0\}$, so $\dim(V_1 \cap V_2 \cap V_3) = 0$.
+- The sum $V_1 + V_2 = \operatorname{span}((1,0), (0,1)) = \mathbb{R}^2$.
+- The sum $V_1 + V_2 + V_3 = \mathbb{R}^2 + V_3 = \mathbb{R}^2$. So $\dim(V_1+V_2+V_3) = 2$.
+
+Now, let's plug these into the proposed formula:
+- **LHS**: $\dim(V_1+V_2+V_3) = 2$.
+- **RHS**: $1 + 1 + 1 - 0 - 0 - 0 + 0 = 3$.
+
+Since $2 \neq 3$, the formula is false.
+
+## Problem 20
+
+The main trick is to write $S = V_1+V_2+V_3$ in three different ways: 
+
+
+1. $\dim S = \dim((V_1+V_2)+V_3) = \dim(V_1+V_2) + \dim V_3 - \dim((V_1+V_2)\cap V_3)$
+2. $\dim S = \dim((V_1+V_3)+V_2) = \dim(V_1+V_3) + \dim V_2 - \dim((V_1+V_3)\cap V_2)$
+3. $\dim S = \dim((V_2+V_3)+V_1) = \dim(V_2+V_3) + \dim V_1 - \dim((V_2+V3)\cap V_1)$
+
+expand the first one:
+
+$$
+\begin{align*}
+\dim(V_1+V_2+V_3) &= \dim(V_1+V_2) + \dim V_3 - \dim((V_1+V_2)\cap V_3) \\
+&= (\dim V_1 + \dim V_2 - \dim(V_1 \cap V_2)) + \dim V_3 - \dim((V_1+V_2)\cap V_3) \\
+&= \dim V_1 + \dim V_2 + \dim V_3 - \dim(V_1 \cap V_2) - \dim((V_1+V_2)\cap V_3)
+\end{align*}
+$$
+
+Similarly,
+$$
+\dim(V_1+V_2+V_3) = \dim V_1 + \dim V_2 + \dim V_3 - \dim(V_1 \cap V_3) - \dim((V_1+V_3)\cap V_2)
+$$
+$$
+\dim(V_1+V_2+V_3) = \dim V_1 + \dim V_2 + \dim V_3 - \dim(V_2 \cap V_3) - \dim((V_2+V_3)\cap V_1)
+$$
+Summing these three identities:
+$$
+\begin{align*}
+3 \dim(V_1+V_2+V_3) = 3(\dim V_1 + \dim V_2 + \dim V_3) \\
+- (\dim(V_1 \cap V_2) + \dim(V_1 \cap V_3) + \dim(V_2 \cap V_3)) \\
+- (\dim((V_1+V_2)\cap V_3) + \dim((V_1+V_3)\cap V_2) + \dim((V_2+V_3)\cap V_1))
+\end{align*}
+$$
+
+Divide by 3 to get the identity from the textbook..
