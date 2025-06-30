@@ -15,13 +15,13 @@ for any $t > 0$. (The right hand side is negative for $t < 0$ for which the ineq
 My proof: 
 
 $$ 
-\begin{align}
+\begin{align*}
 P(|Z| \geq t) &= P(Z > t) + P(Z < -t) = 2 P(Z > t) \\
 \implies P(Z > t) \cdot t &= 2 \cdot t \int_{t}^{\infty} \frac{1}{\sqrt{2\pi}} e^{-\frac{x^2}{2}} dx \\
 &= \sqrt{\frac{2}{\pi}}  \int_{t}^{\infty} t \cdot e^{-\frac{x^2}{2}} dx \\
 &\leq \sqrt{\frac{2}{\pi}}  \int_{t}^{\infty} x \cdot e^{-\frac{x^2}{2}} dx && \text{since x $\geq$ t}\\
 &= \sqrt{\frac{2}{\pi}}  \cdot e^{-\frac{t^2}{2}}
-\end{align}
+\end{align*}
 $$
 
 Hence the result. 
@@ -42,11 +42,14 @@ $$
 
 My proof: 
 
-Let's start with a simple yet important result; $$var(X) \geq 0$$ for any random variable as well as some important properties of Covariance
+Let's start with a simple yet important result; $$var(X) \geq 0$$ for any random variable 
+
+as well as some important properties of Covariance
 
 $$ 
 Cov(aX, bY) = ab Cov(X,Y)
 $$
+
 
 $$
 \begin{align*}
